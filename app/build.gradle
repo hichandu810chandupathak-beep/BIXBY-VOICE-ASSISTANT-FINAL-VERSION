@@ -1,3 +1,2 @@
-plugins { id 'com.android.application' }
- 'android {namespaces com.bixby.voiceassistant; compileSdk 35; defaultConfig { application com.bixby.voiceassistant; minSdk 23; targetSdk 35; versionCode 1; versonName 1.0 } }' 
-dependencies {}
+plugins {
+  ” id 'v6öÒææG&ö–BæÆ–6>–öâp§8 ¦æG%V–B°¢	BæÖW76YBv6öÑF&—†'’çfö–6V76—7FçBp¢	B6ö×–ÆU6F¹C3P ¢	BFVfVÇD6öæf–r°¢	B	BjÆ–6F–öä–Bv6öÒæ&—†'’çfö–4†76—4æçBp¢	B	Bj	FÖ–å6F²#0¢	Bj	Bj	GF&vWE6F²3P¢	Bj	Bj	GfW'6–öä6öFYC©Bj	Bj	BfW'6–öäæÖRsãp¢	^	¨BŸB‚™\[™[˜ÚY\ÈÂŸB
