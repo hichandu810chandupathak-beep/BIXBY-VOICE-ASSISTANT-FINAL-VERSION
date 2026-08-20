@@ -1,16 +1,3 @@
-plugins { id 'com android.application' }
-
-android {
-  namespace 'com.bixby.voiceassistant'
-  compileSdk 35
-
- defaultConfig {
-   application 'com.bixby.voiceassistant'
- minSdk 23
-   targetSdk 35
-   versionCode 1
- versionName '1.0'
-  }
-}
-
+plugins { id 'com.android.application' }
+ 'android {namespaces com.bixby.voiceassistant; compileSdk 35; defaultConfig { application com.bixby.voiceassistant; minSdk 23; targetSdk 35; versionCode 1; versonName 1.0 } }' 
 dependencies {}
