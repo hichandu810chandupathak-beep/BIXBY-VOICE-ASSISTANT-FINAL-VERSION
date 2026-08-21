@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80dp"
+        android:text="Bixby"
+        android:textSize="38sp"
+        android:textStyle="bold"
+        android:textColor="#111111" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="How can I help?"
+        android:textSize="18sp"
+        android:textColor="#666666" />
+
+    <ImageButton
+        android:id="@+id/micButton"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_marginTop="80dp"
+        android:src="@android:drawable/ic_btn_speak_now"
+        android:contentDescription="Microphone"
+        android:background="@android:drawable/btn_default" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Tap the microphone to talk"
+        android:textSize="15sp"
+        android:textColor="#777777" />
+
+</LinearLayout>

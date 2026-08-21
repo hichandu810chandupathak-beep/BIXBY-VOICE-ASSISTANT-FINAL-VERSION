@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:2:1-21:12
-INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:2:1-21:12
-INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:2:1-21:12
-INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:2:1-21:12
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:3:1-26:12
+INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:3:1-26:12
+INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:3:1-26:12
+INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:3:1-26:12
 MERGED from [androidx.activity:activity:1.13.0] /home/codespace/.gradle/caches/8.11.1/transforms/11e9de01757b0d52ec336ea558c575b9/transformed/activity-1.13.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.core:core:1.18.0] /home/codespace/.gradle/caches/8.11.1/transforms/becc3d9d2ad5813edaa13b58e1cdaf23/transformed/core-1.18.0/AndroidManifest.xml:17:1-30:12
 MERGED from [androidx.savedstate:savedstate:1.2.1] /home/codespace/.gradle/caches/8.11.1/transforms/0a9a88e718541acc6e5a1da6f53d5709/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
@@ -29,10 +29,14 @@ MERGED from [androidx.compose.runtime:runtime-annotation-android:1.9.0] /home/co
 	android:versionCode
 		INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml
 	xmlns:android
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:2:11-69
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:3:11-69
+uses-permission#android.permission.RECORD_AUDIO
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:5:5-71
+	android:name
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:5:22-68
 application
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:4:5-19:19
-INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:4:5-19:19
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:7:5-24:19
+INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:7:5-24:19
 MERGED from [androidx.core:core:1.18.0] /home/codespace/.gradle/caches/8.11.1/transforms/becc3d9d2ad5813edaa13b58e1cdaf23/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
 MERGED from [androidx.core:core:1.18.0] /home/codespace/.gradle/caches/8.11.1/transforms/becc3d9d2ad5813edaa13b58e1cdaf23/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/codespace/.gradle/caches/8.11.1/transforms/89a2c5af49ccc32239f149b1f9a36e09/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
@@ -46,29 +50,29 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /home/codespace/.gradle/cac
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.18.0] /home/codespace/.gradle/caches/8.11.1/transforms/becc3d9d2ad5813edaa13b58e1cdaf23/transformed/core-1.18.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:7:9-35
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:10:9-35
 	android:label
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:6:9-30
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:9:9-30
 	android:allowBackup
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:5:9-35
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:8:9-35
 	android:theme
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:8:9-43
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:11:9-43
 activity#com.bixby.voiceassistant.MainActivity
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:10:9-17:20
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:13:9-22:20
 	android:exported
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:12:13-36
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:15:13-36
 	android:name
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:11:13-41
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:14:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:13:13-16:29
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:17:13-20:29
 action#android.intent.action.MAIN
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:14:17-69
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:18:17-69
 	android:name
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:14:25-66
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:18:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:15:17-77
+ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:19:17-77
 	android:name
-		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:15:27-74
+		ADDED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml:19:27-74
 uses-sdk
 INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /workspaces/BIXBY-VOICE-ASSISTANT-FINAL-VERSION/app/src/main/AndroidManifest.xml

@@ -115,6 +115,7 @@ id info
 id italic
 id line1
 id line3
+id micButton
 id normal
 id notification_background
 id notification_main_column
@@ -122,6 +123,7 @@ id notification_main_column_container
 id report_drawn
 id right_icon
 id right_side
+id status
 id tag_accessibility_actions
 id tag_accessibility_clickable_spans
 id tag_accessibility_heading
@@ -148,6 +150,7 @@ id view_tree_on_back_pressed_dispatcher_owner
 id view_tree_saved_state_registry_owner
 id view_tree_view_model_store_owner
 integer status_bar_notification_info_maxnum
+layout activity_main
 layout custom_dialog
 layout ime_base_split_test_activity
 layout ime_secondary_split_test_activity
