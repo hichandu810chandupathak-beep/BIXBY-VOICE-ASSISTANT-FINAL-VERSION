@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
 
         status = findViewById(R.id.status)
 
-        findViewById<Button>(R.id.micButton).setOnClickListener {
+        findViewById<ImageButton>(R.id.micButton).setOnClickListener {
             listen()
         }
 
