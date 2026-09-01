@@ -17,12 +17,14 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var speech: SpeechRecognizer
     private lateinit var status: TextView
+    private lateinit var orb: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         status = findViewById(R.id.status)
+        orb = findViewById(R.id.voiceOrb)
 
         findViewById<ImageButton>(R.id.micButton).setOnClickListener {
             listen()
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
     private fun listen() {
         status.text = "Listening..."
+        orb.text = "◉"
 
         speech = SpeechRecognizer.createSpeechRecognizer(this)
 
@@ -54,10 +57,14 @@ class MainActivity : ComponentActivity() {
                     ?.firstOrNull()
                     .orEmpty()
 
-                status.text = if (text.contains("hey bixby", true)) {
+                status.text = if (
+                    text.contains("hey bixby", true)
+                ) {
                     "Bixby activated"
-                } else {
+                } else if (text.isNotBlank()) {
                     text
+                } else {
+                    "How can I help?"
                 }
             }
 
@@ -65,13 +72,30 @@ class MainActivity : ComponentActivity() {
                 status.text = "Try again"
             }
 
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
+            override fun onReadyForSpeech(params: Bundle?) {
+                status.text = "Listening..."
+            }
+
+            override fun onBeginningOfSpeech() {
+                status.text = "I'm listening..."
+            }
+
             override fun onRmsChanged(rmsdB: Float) {}
+
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
+
+            override fun onEndOfSpeech() {
+                status.text = "Processing..."
+            }
+
+            override fun onPartialResults(
+                partialResults: Bundle?
+            ) {}
+
+            override fun onEvent(
+                eventType: Int,
+                params: Bundle?
+            ) {}
         })
 
         speech.startListening(
@@ -80,12 +104,22 @@ class MainActivity : ComponentActivity() {
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                 )
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE,
+                    "en-US"
+                )
+                putExtra(
+                    RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                    true
+                )
             }
         )
     }
 
     override fun onDestroy() {
-        if (::speech.isInitialized) speech.destroy()
+        if (::speech.isInitialized) {
+            speech.destroy()
+        }
         super.onDestroy()
     }
 }
