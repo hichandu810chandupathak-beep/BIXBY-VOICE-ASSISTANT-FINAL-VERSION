@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#070914">
+    android:background="#05060D">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,54 +13,100 @@
         android:gravity="center_horizontal"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
-        android:paddingTop="70dp"
-        android:paddingBottom="30dp">
+        android:paddingTop="44dp"
+        android:paddingBottom="24dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="BIXBY"
-            android:textSize="30sp"
-            android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:letterSpacing="0.18" />
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.22" />
 
         <TextView
             android:id="@+id/status"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
             android:text="How can I help?"
-            android:textSize="18sp"
-            android:textColor="#B9BDD4" />
+            android:textColor="#C9CBE0"
+            android:textSize="17sp" />
+
+        <FrameLayout
+            android:layout_width="330dp"
+            android:layout_height="330dp"
+            android:layout_marginTop="28dp"
+            android:gravity="center">
+
+            <View
+                android:layout_width="320dp"
+                android:layout_height="320dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_outer" />
+
+            <View
+                android:layout_width="285dp"
+                android:layout_height="285dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_middle" />
+
+            <View
+                android:layout_width="245dp"
+                android:layout_height="245dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_glow" />
+
+            <TextView
+                android:id="@+id/voiceOrb"
+                android:layout_width="175dp"
+                android:layout_height="175dp"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:text="◉"
+                android:textColor="#FFFFFF"
+                android:textSize="70sp"
+                android:background="@drawable/orb_inner"
+                android:elevation="12dp" />
+
+        </FrameLayout>
 
         <TextView
-            android:id="@+id/voiceOrb"
-            android:layout_width="220dp"
-            android:layout_height="220dp"
-            android:layout_marginTop="55dp"
-            android:gravity="center"
-            android:text="◉"
-            android:textSize="120sp"
-            android:textColor="#8B7CFF"
-            android:background="#171A35" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="VOICE"
+            android:textColor="#777B94"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.30" />
 
         <ImageButton
             android:id="@+id/micButton"
-            android:layout_width="82dp"
-            android:layout_height="82dp"
-            android:layout_marginTop="38dp"
-            android:src="@android:drawable/ic_btn_speak_now"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/mic_background"
             android:contentDescription="Microphone"
-            android:background="@android:color/transparent" />
+            android:padding="18dp"
+            android:src="@android:drawable/ic_btn_speak_now" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="11dp"
             android:text="Tap to talk"
-            android:textSize="15sp"
-            android:textColor="#8F93AA" />
+            android:textColor="#969AAF"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Say Hey Bixby"
+            android:textColor="#5F647B"
+            android:textSize="12sp" />
 
     </LinearLayout>
 
