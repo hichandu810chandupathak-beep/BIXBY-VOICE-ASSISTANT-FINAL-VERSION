@@ -3,53 +3,105 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="#070914">
+    android:gravity="center_horizontal"
+    android:background="#05060D"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="28dp"
+    android:paddingBottom="24dp">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="BIXBY"
-        android:textSize="32sp"
-        android:textStyle="bold"
         android:textColor="#FFFFFF"
-        android:letterSpacing="0.15" />
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.10" />
 
     <TextView
-        android:id="@+id/status"
+        android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
         android:text="How can I help?"
-        android:textSize="18sp"
-        android:textColor="#B9BDD4" />
+        android:textColor="#AEB4C7"
+        android:textSize="15sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="12dp"
+        android:gravity="center">
+
+        <View
+            android:id="@+id/orb_outer"
+            android:layout_width="320dp"
+            android:layout_height="320dp"
+            android:layout_gravity="center"
+            android:background="@drawable/orb_outer" />
+
+        <View
+            android:id="@+id/orb_middle"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_gravity="center"
+            android:background="@drawable/orb_middle" />
+
+        <View
+            android:id="@+id/orb_glow"
+            android:layout_width="245dp"
+            android:layout_height="245dp"
+            android:layout_gravity="center"
+            android:background="@drawable/orb_glow" />
+
+        <TextView
+            android:id="@+id/voiceOrb"
+            android:layout_width="205dp"
+            android:layout_height="205dp"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:background="@drawable/orb_inner"
+            android:text=""
+            android:textColor="@android:color/transparent" />
+
+    </FrameLayout>
 
     <TextView
-        android:layout_width="190dp"
-        android:layout_height="190dp"
-        android:layout_marginTop="42dp"
-        android:gravity="center"
-        android:text="◉"
-        android:textSize="110sp"
-        android:textColor="#8B7CFF"
-        android:background="#171A35" />
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="VOICE ASSISTANT"
+        android:textColor="#8F96AD"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.16" />
 
     <ImageButton
         android:id="@+id/micButton"
-        android:layout_width="76dp"
-        android:layout_height="76dp"
-        android:layout_marginTop="30dp"
-        android:src="@android:drawable/ic_btn_speak_now"
+        android:layout_width="68dp"
+        android:layout_height="68dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/mic_background"
         android:contentDescription="Microphone"
-        android:background="@android:color/transparent" />
+        android:padding="17dp"
+        android:src="@android:drawable/ic_btn_speak_now" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
+        android:layout_marginTop="10dp"
         android:text="Tap to talk"
-        android:textSize="15sp"
-        android:textColor="#8F93AA" />
+        android:textColor="#FFFFFF"
+        android:textSize="15sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Say “Hey Bixby”"
+        android:textColor="#8F96AD"
+        android:textSize="13sp" />
 
 </LinearLayout>

@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        status = findViewById(R.id.status)
+        status = findViewById(R.id.statusText)
         orb = findViewById(R.id.voiceOrb)
 
         tts = TextToSpeech(this) { result ->
@@ -60,75 +60,108 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startIdleAnimation() {
-        orbAnimator?.cancel()
 
-        orbAnimator = ObjectAnimator.ofFloat(
-            orb,
-            View.SCALE_X,
-            1.0f,
-            1.035f,
-            1.0f
-        ).apply {
-            duration = 2200
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+    orbAnimator?.cancel()
 
-        ObjectAnimator.ofFloat(
-            orb,
-            View.SCALE_Y,
-            1.0f,
-            1.035f,
-            1.0f
-        ).apply {
-            duration = 2200
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+    val orbScaleX = ObjectAnimator.ofFloat(
+        orb,
+        View.SCALE_X,
+        1.0f,
+        1.08f,
+        1.0f
+    )
+
+    val orbScaleY = ObjectAnimator.ofFloat(
+        orb,
+        View.SCALE_Y,
+        1.0f,
+        1.08f,
+        1.0f
+    )
+
+    val glow = findViewById<View>(R.id.orb_glow)
+
+    val glowScaleX = ObjectAnimator.ofFloat(
+        glow,
+        View.SCALE_X,
+        1.0f,
+        1.12f,
+        1.0f
+    )
+
+    val glowScaleY = ObjectAnimator.ofFloat(
+        glow,
+        View.SCALE_Y,
+        1.0f,
+        1.12f,
+        1.0f
+    )
+
+    orbAnimator = orbScaleX.apply {
+        duration = 1800
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.REVERSE
+        start()
     }
 
-    private fun startListeningAnimation() {
-        orbAnimator?.cancel()
+    orbScaleY.duration = 1800
+    orbScaleY.repeatCount = ValueAnimator.INFINITE
+    orbScaleY.repeatMode = ValueAnimator.REVERSE
+    orbScaleY.start()
 
-        orbAnimator = ObjectAnimator.ofFloat(
-            orb,
-            View.SCALE_X,
-            1.0f,
-            1.12f,
-            1.0f
-        ).apply {
-            duration = 750
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+    glowScaleX.duration = 1800
+    glowScaleX.repeatCount = ValueAnimator.INFINITE
+    glowScaleX.repeatMode = ValueAnimator.REVERSE
+    glowScaleX.start()
 
-        ObjectAnimator.ofFloat(
-            orb,
-            View.SCALE_Y,
-            1.0f,
-            1.12f,
-            1.0f
-        ).apply {
-            duration = 750
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+    glowScaleY.duration = 1800
+    glowScaleY.repeatCount = ValueAnimator.INFINITE
+    glowScaleY.repeatMode = ValueAnimator.REVERSE
+    glowScaleY.start()
+}
+
+private fun startListeningAnimation() {
+
+    orbAnimator?.cancel()
+
+    orbAnimator = ObjectAnimator.ofFloat(
+        orb,
+        View.SCALE_X,
+        1.0f,
+        1.16f,
+        1.0f
+    ).apply {
+        duration = 700
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.REVERSE
+        start()
     }
 
-    private fun stopAnimation() {
-        orbAnimator?.cancel()
-        orbAnimator = null
-
-        orb.animate()
-            .scaleX(1f)
-            .scaleY(1f)
-            .setDuration(200)
-            .start()
+    ObjectAnimator.ofFloat(
+        orb,
+        View.SCALE_Y,
+        1.0f,
+        1.16f,
+        1.0f
+    ).apply {
+        duration = 700
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.REVERSE
+        start()
     }
+}
+
+private fun stopAnimation() {
+
+    orbAnimator?.cancel()
+    orbAnimator = null
+
+    orb.animate()
+        .scaleX(1f)
+        .scaleY(1f)
+        .setDuration(200)
+        .start()
+}
 
     private fun listen() {
         status.text = "Listening..."
