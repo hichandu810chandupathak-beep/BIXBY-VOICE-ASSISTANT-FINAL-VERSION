@@ -61,107 +61,107 @@ class MainActivity : ComponentActivity() {
 
     private fun startIdleAnimation() {
 
-    orbAnimator?.cancel()
+        orbAnimator?.cancel()
 
-    val orbScaleX = ObjectAnimator.ofFloat(
-        orb,
-        View.SCALE_X,
-        1.0f,
-        1.08f,
-        1.0f
-    )
+        val orbScaleX = ObjectAnimator.ofFloat(
+            orb,
+            View.SCALE_X,
+            1.0f,
+            1.08f,
+            1.0f
+        )
 
-    val orbScaleY = ObjectAnimator.ofFloat(
-        orb,
-        View.SCALE_Y,
-        1.0f,
-        1.08f,
-        1.0f
-    )
+        val orbScaleY = ObjectAnimator.ofFloat(
+            orb,
+            View.SCALE_Y,
+            1.0f,
+            1.08f,
+            1.0f
+        )
 
-    val glow = findViewById<View>(R.id.orb_glow)
+        val glow = findViewById<View>(R.id.orb_glow)
 
-    val glowScaleX = ObjectAnimator.ofFloat(
-        glow,
-        View.SCALE_X,
-        1.0f,
-        1.12f,
-        1.0f
-    )
+        val glowScaleX = ObjectAnimator.ofFloat(
+            glow,
+            View.SCALE_X,
+            1.0f,
+            1.12f,
+            1.0f
+        )
 
-    val glowScaleY = ObjectAnimator.ofFloat(
-        glow,
-        View.SCALE_Y,
-        1.0f,
-        1.12f,
-        1.0f
-    )
+        val glowScaleY = ObjectAnimator.ofFloat(
+            glow,
+            View.SCALE_Y,
+            1.0f,
+            1.12f,
+            1.0f
+        )
 
-    orbAnimator = orbScaleX.apply {
-        duration = 1800
-        repeatCount = ValueAnimator.INFINITE
-        repeatMode = ValueAnimator.REVERSE
-        start()
+        orbAnimator = orbScaleX.apply {
+            duration = 1800
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
+
+        orbScaleY.duration = 1800
+        orbScaleY.repeatCount = ValueAnimator.INFINITE
+        orbScaleY.repeatMode = ValueAnimator.REVERSE
+        orbScaleY.start()
+
+        glowScaleX.duration = 1800
+        glowScaleX.repeatCount = ValueAnimator.INFINITE
+        glowScaleX.repeatMode = ValueAnimator.REVERSE
+        glowScaleX.start()
+
+        glowScaleY.duration = 1800
+        glowScaleY.repeatCount = ValueAnimator.INFINITE
+        glowScaleY.repeatMode = ValueAnimator.REVERSE
+        glowScaleY.start()
     }
 
-    orbScaleY.duration = 1800
-    orbScaleY.repeatCount = ValueAnimator.INFINITE
-    orbScaleY.repeatMode = ValueAnimator.REVERSE
-    orbScaleY.start()
+    private fun startListeningAnimation() {
 
-    glowScaleX.duration = 1800
-    glowScaleX.repeatCount = ValueAnimator.INFINITE
-    glowScaleX.repeatMode = ValueAnimator.REVERSE
-    glowScaleX.start()
+        orbAnimator?.cancel()
 
-    glowScaleY.duration = 1800
-    glowScaleY.repeatCount = ValueAnimator.INFINITE
-    glowScaleY.repeatMode = ValueAnimator.REVERSE
-    glowScaleY.start()
-}
+        orbAnimator = ObjectAnimator.ofFloat(
+            orb,
+            View.SCALE_X,
+            1.0f,
+            1.16f,
+            1.0f
+        ).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
 
-private fun startListeningAnimation() {
-
-    orbAnimator?.cancel()
-
-    orbAnimator = ObjectAnimator.ofFloat(
-        orb,
-        View.SCALE_X,
-        1.0f,
-        1.16f,
-        1.0f
-    ).apply {
-        duration = 700
-        repeatCount = ValueAnimator.INFINITE
-        repeatMode = ValueAnimator.REVERSE
-        start()
+        ObjectAnimator.ofFloat(
+            orb,
+            View.SCALE_Y,
+            1.0f,
+            1.16f,
+            1.0f
+        ).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
     }
 
-    ObjectAnimator.ofFloat(
-        orb,
-        View.SCALE_Y,
-        1.0f,
-        1.16f,
-        1.0f
-    ).apply {
-        duration = 700
-        repeatCount = ValueAnimator.INFINITE
-        repeatMode = ValueAnimator.REVERSE
-        start()
+    private fun stopAnimation() {
+
+        orbAnimator?.cancel()
+        orbAnimator = null
+
+        orb.animate()
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(200)
+            .start()
     }
-}
-
-private fun stopAnimation() {
-
-    orbAnimator?.cancel()
-    orbAnimator = null
-
-    orb.animate()
-        .scaleX(1f)
-        .scaleY(1f)
-        .setDuration(200)
-        .start()
-}
 
     private fun listen() {
         status.text = "Listening..."
@@ -219,10 +219,19 @@ private fun stopAnimation() {
                     return
                 }
 
-                if (isBixbyWakeWord(text)) {
-                    status.text = "Bixby activated"
-                    orb.text = "●"
-                    speak("हाँ, बताइए")
+                val command = extractBixbyCommand(text)
+
+                if (command != null) {
+                    if (command.isBlank()) {
+                        status.text = "Bixby activated"
+                        orb.text = "●"
+                        speak("हाँ, बताइए")
+                    } else {
+                        status.text = command
+                        orb.text = "●"
+                        // The wake word has been consumed; the remaining text is the command.
+                        // Command execution can be connected here without changing wake-word detection.
+                    }
                 } else {
                     status.text = text
                     orb.text = "●"
@@ -262,27 +271,25 @@ private fun stopAnimation() {
         speech.startListening(intent)
     }
 
-    private fun isBixbyWakeWord(text: String): Boolean {
+    private fun extractBixbyCommand(text: String): String? {
         val normalized = text
+            .trim()
             .lowercase(Locale.ROOT)
-            .replace("-", "")
-            .replace("_", "")
-            .replace(" ", "")
+            .replace(Regex("[\\p{Punct}]+"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
 
-        val bixby =
-            normalized.contains("bixby") ||
-            normalized.contains("bixbee") ||
-            normalized.contains("bixbi") ||
-            normalized.contains("बिक्सबी") ||
-            normalized.contains("बिक्सबि") ||
-            normalized.contains("बिक्सबे")
-
-        val hey =
-            normalized.contains("hey") ||
-            normalized.contains("हे") ||
-            normalized.contains("है")
-
-        return bixby && hey || bixby
+        return when {
+            normalized == "bixby" -> ""
+            normalized.startsWith("bixby ") -> text.trim().substring(5).trim()
+            normalized == "hey bixby" -> ""
+            normalized.startsWith("hey bixby ") -> text.trim().substring(10).trim()
+            normalized == "हे बिक्सबी" -> ""
+            normalized.startsWith("हे बिक्सबी ") -> text.trim().substring(10).trim()
+            normalized == "है बिक्सबी" -> ""
+            normalized.startsWith("है बिक्सबी ") -> text.trim().substring(10).trim()
+            else -> null
+        }
     }
 
     private fun speak(text: String) {
