@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var orb: TextView
     private lateinit var tts: TextToSpeech
     private lateinit var root: View
-    private lateinit var themeButton: TextView
+    private lateinit var themeButton: ImageButton
 
     private var animationSet = mutableListOf<ObjectAnimator>()
 
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
 
     private fun updateThemeIcon() {
         val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        themeButton.text = if (dark) "☼" else "☾"
+        themeButton.setImageResource(if (dark) R.drawable.ic_sun else R.drawable.ic_moon)
         themeButton.contentDescription = if (dark) "Switch to light mode" else "Switch to dark mode"
     }
 
