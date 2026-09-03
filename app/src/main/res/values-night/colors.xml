@@ -1,14 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bixby_primary_text">#FFFFFFFF</color>
-    <color name="bixby_secondary_text">#AEB4C7</color>
-    <color name="bixby_background_start">#050611</color>
-    <color name="bixby_background_center">#0B0D1C</color>
-    <color name="bixby_background_end">#050611</color>
-    <color name="bixby_panel">#111426</color>
-    <color name="bixby_panel_stroke">#252A43</color>
-    <color name="bixby_control">#111426</color>
-    <color name="bixby_control_stroke">#252A43</color>
-    <color name="bixby_mic">#252849</color>
-    <color name="bixby_mic_stroke">#575B86</color>
+    <color name="bixby_primary_text">#F7F5FF</color>
+    <color name="bixby_secondary_text">#B8B3C9</color>
+    <color name="bixby_background_start">#090A12</color>
+    <color name="bixby_background_center">#111225</color>
+    <color name="bixby_background_end">#1A1730</color>
+    <color name="bixby_panel">#CC17182A</color>
+    <color name="bixby_panel_stroke">#403A5B</color>
+    <color name="bixby_control">#191A2E</color>
+    <color name="bixby_control_stroke">#4B4568</color>
+    <color name="bixby_mic">#E8E2FF</color>
+    <color name="bixby_mic_stroke">#A494FF</color>
 </resources>
