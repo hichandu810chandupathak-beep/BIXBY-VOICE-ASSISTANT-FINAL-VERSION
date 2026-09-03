@@ -38,6 +38,17 @@ object CommandExecutor {
         if (text.contains("scroll up") || text.contains("ऊपर स्क्रॉल") || text.contains("ऊपर करो")) {
             return accessibilityScroll(false)
         }
+
+        // Type text into the currently focused/editable field.
+        val typeMatch = Regex("(?:type|enter|write|input|लिखो|लिखें|टाइप|डालो|भरें)\\s+(.+)", RegexOption.IGNORE_CASE)
+            .find(raw)
+        if (typeMatch != null) {
+            val value = typeMatch.groupValues[1].trim()
+            if (!AccessibilityCommandService.isEnabled()) return "फोन कंट्रोल के लिए Accessibility Service को एक बार चालू करना होगा।"
+            if (value.isBlank()) return "लिखने के लिए टेक्स्ट नहीं मिला।"
+            return if (AccessibilityCommandService.setText(value)) "ठीक है, टेक्स्ट डाल दिया।" else "अभी टेक्स्ट वाले बॉक्स में नहीं लिख पाया।"
+        }
+
         val clickTarget = Regex("(?:click|tap|press|क्लिक|टैप|दबाओ)\\s+(.+)", RegexOption.IGNORE_CASE)
             .find(raw)?.groupValues?.getOrNull(1)?.trim()
         if (!clickTarget.isNullOrBlank()) {
