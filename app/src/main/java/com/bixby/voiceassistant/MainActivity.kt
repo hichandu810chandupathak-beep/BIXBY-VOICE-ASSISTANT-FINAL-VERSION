@@ -11,6 +11,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
@@ -46,6 +47,31 @@ class MainActivity : ComponentActivity() {
         tts = TextToSpeech(this) { result ->
             if (result == TextToSpeech.SUCCESS) {
                 tts.language = Locale.forLanguageTag("hi-IN")
+                tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        runOnUiThread {
+                            status.text = "Speaking..."
+                            orb.text = "●"
+                            startListeningAnimation()
+                        }
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        runOnUiThread {
+                            status.text = "How can I help?"
+                            orb.text = "●"
+                            startIdleAnimation()
+                        }
+                    }
+
+                    override fun onError(utteranceId: String?) {
+                        runOnUiThread {
+                            status.text = "How can I help?"
+                            orb.text = "●"
+                            startIdleAnimation()
+                        }
+                    }
+                })
             }
         }
 
