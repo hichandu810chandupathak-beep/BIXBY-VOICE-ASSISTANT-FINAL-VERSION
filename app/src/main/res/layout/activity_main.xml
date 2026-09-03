@@ -68,14 +68,16 @@
                 android:layout_width="318dp"
                 android:layout_height="318dp"
                 android:layout_gravity="center"
-                android:background="@drawable/orb_outer" />
+                android:background="@drawable/orb_outer"
+                android:elevation="2dp" />
 
             <View
                 android:id="@+id/orb_middle"
                 android:layout_width="276dp"
                 android:layout_height="276dp"
                 android:layout_gravity="center"
-                android:background="@drawable/orb_middle" />
+                android:background="@drawable/orb_middle"
+                android:elevation="3dp" />
 
             <View
                 android:id="@+id/orb_glow"
@@ -83,6 +85,7 @@
                 android:layout_height="244dp"
                 android:layout_gravity="center"
                 android:background="@drawable/orb_glow"
+                android:elevation="4dp"
                 android:alpha="0.94" />
 
             <TextView
