@@ -70,7 +70,7 @@
             android:paddingStart="18dp"
             android:paddingEnd="18dp">
             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Ask Bixby anything" android:textColor="@color/bixby_primary_text" android:textSize="15sp" />
-            <ImageButton android:id="@+id/micButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/mic_background" android:contentDescription="Microphone" android:padding="12dp" android:src="@android:drawable/ic_btn_speak_now" />
+            <ImageButton android:id="@+id/micButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/mic_background" android:contentDescription="Microphone" android:padding="12dp" android:src="@drawable/ic_mic" android:scaleType="centerInside" />
         </LinearLayout>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:gravity="center" android:text="Tap the microphone or say “Hey Bixby”" android:textColor="@color/bixby_secondary_text" android:textSize="12sp" />
     </LinearLayout>
