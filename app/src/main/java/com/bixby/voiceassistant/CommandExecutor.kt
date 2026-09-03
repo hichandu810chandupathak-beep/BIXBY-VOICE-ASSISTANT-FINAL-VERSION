@@ -81,9 +81,29 @@ object CommandExecutor {
             return "आवाज़ म्यूट कर दी।"
         }
 
-        if (containsAny(text, "wifi", "wi-fi", "वाईफाई", "वाई-फाई"))
+        val wifi = containsAny(text, "wifi", "wi-fi", "वाईफाई", "वाई-फाई")
+        val bluetooth = containsAny(text, "bluetooth", "ब्लूटूथ")
+        val turnOn = containsAny(text, "turn on", "switch on", "enable", "चालू", "ऑन")
+        val turnOff = containsAny(text, "turn off", "switch off", "disable", "बंद", "ऑफ")
+
+        // "Turn on/off Wi-Fi/Bluetooth" is an action command, not a Settings navigation command.
+        if (wifi && (turnOn || turnOff)) {
+            if (!AccessibilityCommandService.isEnabled()) return accessibilityRequired()
+            val enabled = turnOn && !turnOff
+            AccessibilityCommandService.setSystemTile("Wi-Fi", enabled)
+            return if (enabled) "वाई-फाई चालू कर रहा हूँ।" else "वाई-फाई बंद कर रहा हूँ।"
+        }
+        if (bluetooth && (turnOn || turnOff)) {
+            if (!AccessibilityCommandService.isEnabled()) return accessibilityRequired()
+            val enabled = turnOn && !turnOff
+            AccessibilityCommandService.setSystemTile("Bluetooth", enabled)
+            return if (enabled) "ब्लूटूथ चालू कर रहा हूँ।" else "ब्लूटूथ बंद कर रहा हूँ।"
+        }
+
+        // Settings navigation remains available only when the user explicitly asks for settings.
+        if (containsAny(text, "wifi settings", "wi-fi settings", "वाईफाई सेटिंग", "वाई-फाई सेटिंग"))
             return open(context, Intent(Settings.ACTION_WIFI_SETTINGS), "वाई-फाई सेटिंग्स खोल रहा हूँ।")
-        if (containsAny(text, "bluetooth", "ब्लूटूथ"))
+        if (containsAny(text, "bluetooth settings", "ब्लूटूथ सेटिंग"))
             return open(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS), "ब्लूटूथ सेटिंग्स खोल रहा हूँ।")
         if (containsAny(text, "display settings", "screen settings", "डिस्प्ले सेटिंग", "स्क्रीन सेटिंग"))
             return open(context, Intent(Settings.ACTION_DISPLAY_SETTINGS), "डिस्प्ले सेटिंग्स खोल रहा हूँ।")
@@ -202,10 +222,6 @@ object CommandExecutor {
             "play store" to "play store", "प्ले स्टोर" to "play store"
         )
         val target = aliases[normalized] ?: normalized
-
-        // First use stable package-name fallbacks for common apps. This prevents
-        // Android package-visibility/launcher-label differences from sending a
-        // real app command to Gemini.
         val knownPackages = mapOf(
             "youtube" to "com.google.android.youtube",
             "chrome" to "com.android.chrome",
