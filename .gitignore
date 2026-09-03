@@ -1,0 +1,18 @@
+# Gradle
+.gradle/
+**/build/
+
+# Local configuration
+local.properties
+
+# Kotlin/IDE generated state
+.kotlin/
+.idea/
+*.iml
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
