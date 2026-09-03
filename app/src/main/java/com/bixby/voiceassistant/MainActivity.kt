@@ -29,12 +29,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var orb: TextView
     private lateinit var tts: TextToSpeech
-    private lateinit var themeButton: ImageButton
-
     private var animationSet = mutableListOf<ObjectAnimator>()
     private var listeningByButton = false
     private val speechHandler = Handler(Looper.getMainLooper())
-    private val prefs by lazy { getSharedPreferences("bixby_settings", MODE_PRIVATE) }
 
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,17 +44,12 @@ class MainActivity : AppCompatActivity() {
     ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        syncThemeWithSystemIfNeeded()
-        applyThemeMode()
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         status = findViewById(R.id.statusText)
         orb = findViewById(R.id.voiceOrb)
-        themeButton = findViewById(R.id.themeButton)
-
-        themeButton.setOnClickListener { toggleTheme() }
-        updateThemeIcon()
 
         tts = TextToSpeech(this) { result ->
             if (result == TextToSpeech.SUCCESS) {
@@ -102,60 +94,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        syncThemeWithSystemIfNeeded()
-        if (::themeButton.isInitialized) {
-            updateThemeIcon()
-        }
-    }
-
-    private fun systemNightMode(): Int {
-        return applicationContext.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-    }
-
-    private fun syncThemeWithSystemIfNeeded() {
-        val savedMode = prefs.getString("theme_mode", "system") ?: "system"
-        if (savedMode == "system") return
-
-        val systemNow = systemNightMode()
-        val systemWhenSelected = prefs.getInt("system_mode_when_selected", systemNow)
-        if (systemNow != systemWhenSelected) {
-            prefs.edit().putString("theme_mode", "system").remove("system_mode_when_selected").apply()
-        }
-    }
-
-    private fun applyThemeMode() {
-        when (prefs.getString("theme_mode", "system")) {
-            "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        }
-    }
-
-    private fun toggleTheme() {
-        val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val systemNow = systemNightMode()
-        val next = if (dark) "light" else "dark"
-        prefs.edit()
-            .putString("theme_mode", next)
-            .putInt("system_mode_when_selected", systemNow)
-            .apply()
-        AppCompatDelegate.setDefaultNightMode(if (next == "dark") AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-    }
-
-    private fun updateThemeIcon() {
-        val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        themeButton.setImageResource(if (dark) R.drawable.ic_sun else R.drawable.ic_moon)
-        themeButton.contentDescription = if (dark) "Switch to light mode" else "Switch to dark mode"
-    }
-
     private fun requestAssistantRoleIfAvailable() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
         val roleManager = getSystemService(RoleManager::class.java) ?: return
         if (!roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) return
-        if (roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) return
-        assistantRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+        if (!roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) {
+            assistantRoleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+        }
     }
 
     private fun clearAnimations() { animationSet.forEach { it.cancel() }; animationSet.clear() }
