@@ -24,6 +24,7 @@
         <service
             android:name=".BixbyVoiceInteractionService"
             android:exported="true"
+            android:directBootAware="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION">
             <intent-filter>
                 <action android:name="android.service.voice.VoiceInteractionService" />
