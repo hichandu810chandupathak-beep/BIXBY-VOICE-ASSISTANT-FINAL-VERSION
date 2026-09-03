@@ -57,12 +57,22 @@ class AccessibilityCommandService : AccessibilityService() {
     }
 
     private fun findAndScroll(forward: Boolean): Boolean {
-        val nodes = root()?.findAccessibilityNodeInfosByViewId("android:id/list").orEmpty()
-        val target = nodes.firstOrNull() ?: root() ?: return false
-        return target.performAction(
-            if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-            else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-        )
+        val currentRoot = root() ?: return false
+        val action = if (forward) {
+            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+        } else {
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+        }
+        return findScrollable(currentRoot, action)
+    }
+
+    private fun findScrollable(node: AccessibilityNodeInfo?, action: Int): Boolean {
+        if (node == null) return false
+        if (node.isScrollable && node.isEnabled && node.performAction(action)) return true
+        for (i in 0 until node.childCount) {
+            if (findScrollable(node.getChild(i), action)) return true
+        }
+        return false
     }
 
     private fun findNode(text: String): AccessibilityNodeInfo? {
