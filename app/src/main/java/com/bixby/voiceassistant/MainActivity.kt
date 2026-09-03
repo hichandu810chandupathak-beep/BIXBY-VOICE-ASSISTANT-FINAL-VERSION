@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
                 orb.animate().scaleX(target).scaleY(target).setDuration(90L).start()
             }
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { stopAnimation() }
+            override fun onEndOfSpeech() { stopAnimation(); status.text = "Processing..." }
             override fun onError(error: Int) { stopAnimation(); status.text = "Try again"; orb.text = "●"; startIdleAnimation() }
             override fun onResults(results: Bundle?) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
@@ -194,7 +194,16 @@ class MainActivity : ComponentActivity() {
                 }
                 startIdleAnimation()
             }
-            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onPartialResults(partialResults: Bundle?) {
+                val partial = partialResults
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    ?.trim()
+                    .orEmpty()
+                if (partial.isNotBlank()) {
+                    status.text = partial
+                }
+            }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
