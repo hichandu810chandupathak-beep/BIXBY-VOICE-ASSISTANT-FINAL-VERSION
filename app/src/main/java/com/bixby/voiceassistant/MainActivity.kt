@@ -168,6 +168,20 @@ class MainActivity : ComponentActivity() {
         addRotation(middle, 360f, 3000L, 100L)
     }
 
+    private fun startProcessingAnimation() {
+        clearAnimations()
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+
+        addPulse(outer, 1.00f, 1.045f, 1800L)
+        addPulse(middle, 1.00f, 1.065f, 1500L, 100L)
+        addPulse(glow, 1.00f, 1.12f, 1200L, 180L)
+        addPulse(orb, 1.00f, 1.10f, 1100L, 220L)
+        addRotation(outer, -360f, 9000L)
+        addRotation(middle, 360f, 7000L, 120L)
+    }
+
     private fun stopAnimation() {
         clearAnimations()
         findViewById<View>(R.id.orb_outer).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start()
@@ -193,7 +207,11 @@ class MainActivity : ComponentActivity() {
                 orb.animate().scaleX(target).scaleY(target).setDuration(90L).start()
             }
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { stopAnimation(); status.text = "Processing..." }
+            override fun onEndOfSpeech() {
+                status.text = "Processing..."
+                orb.text = "●"
+                startProcessingAnimation()
+            }
             override fun onError(error: Int) { stopAnimation(); status.text = "Try again"; orb.text = "●"; startIdleAnimation() }
             override fun onResults(results: Bundle?) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
