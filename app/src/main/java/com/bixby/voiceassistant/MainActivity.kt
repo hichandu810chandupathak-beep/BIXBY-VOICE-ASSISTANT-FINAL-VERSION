@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var root: View
     private lateinit var themeButton: TextView
 
-    private var orbAnimator: ObjectAnimator? = null
+    private var animationSet = mutableListOf<ObjectAnimator>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
@@ -50,7 +50,6 @@ class MainActivity : ComponentActivity() {
         }
 
         findViewById<ImageButton>(R.id.micButton).setOnClickListener { listen() }
-
         startIdleAnimation()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -80,54 +79,60 @@ class MainActivity : ComponentActivity() {
         themeButton.contentDescription = if (dark) "Switch to light mode" else "Switch to dark mode"
     }
 
-    private fun startIdleAnimation() {
-        orbAnimator?.cancel()
-        val orbScaleX = ObjectAnimator.ofFloat(orb, View.SCALE_X, 1.0f, 1.08f, 1.0f)
-        val orbScaleY = ObjectAnimator.ofFloat(orb, View.SCALE_Y, 1.0f, 1.08f, 1.0f)
-        val glow = findViewById<View>(R.id.orb_glow)
-        val glowScaleX = ObjectAnimator.ofFloat(glow, View.SCALE_X, 1.0f, 1.12f, 1.0f)
-        val glowScaleY = ObjectAnimator.ofFloat(glow, View.SCALE_Y, 1.0f, 1.12f, 1.0f)
+    private fun clearAnimations() {
+        animationSet.forEach { it.cancel() }
+        animationSet.clear()
+    }
 
-        orbAnimator = orbScaleX.apply {
-            duration = 1800
+    private fun addPulse(view: View, minScale: Float, maxScale: Float, durationMs: Long, delayMs: Long = 0L) {
+        ObjectAnimator.ofFloat(view, View.SCALE_X, minScale, maxScale, minScale).apply {
+            duration = durationMs
+            startDelay = delayMs
             repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
+            repeatMode = ValueAnimator.RESTART
+            animationSet.add(this)
             start()
         }
-        orbScaleY.duration = 1800
-        orbScaleY.repeatCount = ValueAnimator.INFINITE
-        orbScaleY.repeatMode = ValueAnimator.REVERSE
-        orbScaleY.start()
-        glowScaleX.duration = 1800
-        glowScaleX.repeatCount = ValueAnimator.INFINITE
-        glowScaleX.repeatMode = ValueAnimator.REVERSE
-        glowScaleX.start()
-        glowScaleY.duration = 1800
-        glowScaleY.repeatCount = ValueAnimator.INFINITE
-        glowScaleY.repeatMode = ValueAnimator.REVERSE
-        glowScaleY.start()
+        ObjectAnimator.ofFloat(view, View.SCALE_Y, minScale, maxScale, minScale).apply {
+            duration = durationMs
+            startDelay = delayMs
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            animationSet.add(this)
+            start()
+        }
+    }
+
+    private fun startIdleAnimation() {
+        clearAnimations()
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+
+        addPulse(outer, 1.00f, 1.035f, 2600L)
+        addPulse(middle, 1.00f, 1.055f, 2200L, 120L)
+        addPulse(glow, 1.00f, 1.10f, 1800L, 220L)
+        addPulse(orb, 1.00f, 1.07f, 1600L, 280L)
     }
 
     private fun startListeningAnimation() {
-        orbAnimator?.cancel()
-        orbAnimator = ObjectAnimator.ofFloat(orb, View.SCALE_X, 1.0f, 1.16f, 1.0f).apply {
-            duration = 700
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
-        ObjectAnimator.ofFloat(orb, View.SCALE_Y, 1.0f, 1.16f, 1.0f).apply {
-            duration = 700
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            start()
-        }
+        clearAnimations()
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+
+        addPulse(outer, 1.00f, 1.07f, 1000L)
+        addPulse(middle, 1.00f, 1.10f, 850L, 80L)
+        addPulse(glow, 1.00f, 1.16f, 700L, 140L)
+        addPulse(orb, 1.00f, 1.16f, 700L, 180L)
     }
 
     private fun stopAnimation() {
-        orbAnimator?.cancel()
-        orbAnimator = null
-        orb.animate().scaleX(1f).scaleY(1f).setDuration(200).start()
+        clearAnimations()
+        findViewById<View>(R.id.orb_outer).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_middle).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_glow).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        orb.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
     }
 
     private fun listen() {
@@ -205,7 +210,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        orbAnimator?.cancel()
+        clearAnimations()
         if (::speech.isInitialized) speech.destroy()
         if (::tts.isInitialized) { tts.stop(); tts.shutdown() }
         super.onDestroy()
