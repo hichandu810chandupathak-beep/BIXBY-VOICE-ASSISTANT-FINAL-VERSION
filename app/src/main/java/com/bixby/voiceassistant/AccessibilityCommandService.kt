@@ -11,30 +11,21 @@ import android.view.accessibility.AccessibilityNodeInfo
 class AccessibilityCommandService : AccessibilityService() {
 
     companion object {
-        @Volatile
-        private var instance: AccessibilityCommandService? = null
-
+        @Volatile private var instance: AccessibilityCommandService? = null
         fun isEnabled(): Boolean = instance != null
         fun global(action: Int): Boolean = instance?.performGlobalAction(action) == true
         fun clickText(text: String): Boolean = instance?.findAndClick(text) == true
         fun setText(text: String): Boolean = instance?.findAndSetText(text) == true
         fun scroll(forward: Boolean): Boolean = instance?.findAndScroll(forward) == true
         fun tap(x: Float, y: Float): Boolean = instance?.tapAt(x, y) == true
-
-        /** Directly operates the Android/Samsung Quick Settings tile through Accessibility. */
         fun setSystemTile(tile: String, enable: Boolean): Boolean = instance?.setTileState(tile, enable) == true
     }
 
     private val handler = Handler(Looper.getMainLooper())
 
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        instance = this
-    }
-
+    override fun onServiceConnected() { super.onServiceConnected(); instance = this }
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) = Unit
     override fun onInterrupt() = Unit
-
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         if (instance === this) instance = null
@@ -49,8 +40,7 @@ class AccessibilityCommandService : AccessibilityService() {
     }
 
     private fun findAndSetText(text: String): Boolean {
-        val node = root()?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            ?: findEditable(root()) ?: return false
+        val node = root()?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: findEditable(root()) ?: return false
         val args = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
@@ -59,8 +49,7 @@ class AccessibilityCommandService : AccessibilityService() {
 
     private fun findAndScroll(forward: Boolean): Boolean {
         val currentRoot = root() ?: return false
-        val action = if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-        else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+        val action = if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
         return findScrollable(currentRoot, action)
     }
 
@@ -73,8 +62,7 @@ class AccessibilityCommandService : AccessibilityService() {
 
     private fun findNode(text: String): AccessibilityNodeInfo? {
         val currentRoot = root() ?: return null
-        val exact = currentRoot.findAccessibilityNodeInfosByText(text).firstOrNull()
-        if (exact != null) return exact
+        currentRoot.findAccessibilityNodeInfosByText(text).firstOrNull()?.let { return it }
         return findByDescription(currentRoot, text)
     }
 
@@ -91,10 +79,7 @@ class AccessibilityCommandService : AccessibilityService() {
     private fun findEditable(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
         if (node == null) return null
         if (node.isEditable) return node
-        for (i in 0 until node.childCount) {
-            val found = findEditable(node.getChild(i))
-            if (found != null) return found
-        }
+        for (i in 0 until node.childCount) findEditable(node.getChild(i))?.let { return it }
         return null
     }
 
@@ -112,44 +97,90 @@ class AccessibilityCommandService : AccessibilityService() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return false
         val path = Path().apply { moveTo(x, y) }
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 60))
             .build()
         return dispatchGesture(gesture, null, null)
     }
 
+    /**
+     * Operates Samsung's Quick Settings connectivity tile. Android does not expose
+     * modern third-party APIs that directly switch Wi-Fi/Bluetooth, so Accessibility
+     * is used to perform the same user action on the system tile.
+     */
     private fun setTileState(tile: String, enable: Boolean): Boolean {
-        // Android does not allow a normal third-party app to call the Wi-Fi/Bluetooth
-        // enable APIs directly on modern Android. Accessibility can operate the
-        // Samsung Quick Settings tile instead, without opening the Settings app.
         if (instance == null) return false
         performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
-        handler.postDelayed({
-            val node = findTile(root(), tile)
-            if (node != null && shouldClickTile(node, enable)) clickNode(node)
-            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 250L)
-        }, 550L)
+        // One UI can expose the panel tree a little later than the global action.
+        // Retry instead of assuming the first accessibility tree is complete.
+        handler.postDelayed({ tryClickSystemTile(tile, enable, 0) }, 650L)
         return true
     }
 
-    private fun findTile(node: AccessibilityNodeInfo?, tile: String): AccessibilityNodeInfo? {
+    private fun tryClickSystemTile(tile: String, enable: Boolean, attempt: Int) {
+        val node = findSystemTile(root(), tile)
+        if (node != null) {
+            val changed = clickOnlyIfNeeded(node, enable)
+            if (changed) {
+                handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 450L)
+                return
+            }
+            // Already in the requested state: close the panel without toggling it.
+            if (isTileInRequestedState(node, enable)) {
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return
+            }
+        }
+        if (attempt < 4) {
+            handler.postDelayed({ tryClickSystemTile(tile, enable, attempt + 1) }, 350L)
+        } else {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+    }
+
+    private fun findSystemTile(node: AccessibilityNodeInfo?, tile: String): AccessibilityNodeInfo? {
         if (node == null) return null
-        val label = listOf(node.text?.toString(), node.contentDescription?.toString())
+        val labels = listOf(node.text?.toString(), node.contentDescription?.toString())
             .filterNotNull().joinToString(" ")
-        if (label.contains(tile, ignoreCase = true)) return node
+        val normalized = labels.lowercase()
+        val match = when (tile.lowercase()) {
+            "wi-fi", "wifi" -> normalized.contains("wi-fi") || normalized.contains("wifi") || normalized.contains("वाई-फाई") || normalized.contains("वाईफाई")
+            "bluetooth" -> normalized.contains("bluetooth") || normalized.contains("ब्लूटूथ")
+            else -> normalized.contains(tile.lowercase())
+        }
+        if (match && node.isEnabled) return node
         for (i in 0 until node.childCount) {
-            val found = findTile(node.getChild(i), tile)
-            if (found != null) return found
+            findSystemTile(node.getChild(i), tile)?.let { return it }
         }
         return null
     }
 
-    private fun shouldClickTile(node: AccessibilityNodeInfo, enable: Boolean): Boolean {
+    private fun clickOnlyIfNeeded(node: AccessibilityNodeInfo, enable: Boolean): Boolean {
         if (!node.isEnabled) return false
-        if (node.isCheckable) return node.isChecked != enable
-        val stateText = listOf(node.text?.toString(), node.contentDescription?.toString())
+        if (node.isCheckable) {
+            if (node.isChecked == enable) return false
+            return clickNode(node)
+        }
+        val state = nodeState(node)
+        if (state == enable) return false
+        if (state == null) {
+            // Unknown state: do not blindly toggle a connectivity control.
+            return false
+        }
+        return clickNode(node)
+    }
+
+    private fun isTileInRequestedState(node: AccessibilityNodeInfo, enable: Boolean): Boolean = nodeState(node) == enable
+
+    private fun nodeState(node: AccessibilityNodeInfo): Boolean? {
+        if (node.isCheckable) return node.isChecked
+        val text = listOf(node.text?.toString(), node.contentDescription?.toString())
             .filterNotNull().joinToString(" ").lowercase()
-        val isOff = stateText.contains("off") || stateText.contains("बंद") || stateText.contains("चालू नहीं")
-        val isOn = stateText.contains("on") || stateText.contains(" चालू") || stateText.contains("enabled")
-        return if (enable) isOff && !isOn else isOn && !isOff
+        val off = text.contains("off") || text.contains("disabled") || text.contains("बंद") || text.contains("चालू नहीं")
+        val on = text.contains("on") || text.contains("enabled") || text.contains("चालू")
+        return when {
+            on && !off -> true
+            off && !on -> false
+            else -> null
+        }
     }
 }
