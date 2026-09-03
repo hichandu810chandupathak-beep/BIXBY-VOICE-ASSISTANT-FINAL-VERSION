@@ -105,7 +105,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center|bottom"
                 android:layout_marginBottom="18dp"
-                android:text="BIXBY"
+                android:text="VOICE"
                 android:textColor="@color/bixby_secondary_text"
                 android:textSize="11sp"
                 android:textStyle="bold"
@@ -152,7 +152,7 @@
             android:gravity="center"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:text="Tap microphone to speak"
+            android:text="Say Hey Bixby"
             android:textColor="@color/bixby_secondary_text"
             android:textSize="11sp"
             android:alpha="0.82" />
