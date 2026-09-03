@@ -160,7 +160,12 @@ class MainActivity : ComponentActivity() {
         speech.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { status.text = "Listening..."; orb.text = "●" }
             override fun onBeginningOfSpeech() { status.text = "I'm listening..."; orb.text = "●"; startListeningAnimation() }
-            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onRmsChanged(rmsdB: Float) {
+                if (!::orb.isInitialized) return
+                val normalized = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+                val target = 1.04f + (normalized * 0.14f)
+                orb.animate().scaleX(target).scaleY(target).setDuration(90L).start()
+            }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { stopAnimation() }
             override fun onError(error: Int) { stopAnimation(); status.text = "Try again"; orb.text = "●"; startIdleAnimation() }
