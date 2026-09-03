@@ -4,18 +4,18 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.core.app.NotificationCompat
-import android.app.Service
-import android.content.Context
-import android.os.IBinder
 import java.util.Locale
 
 /**
@@ -34,9 +34,7 @@ class HotwordListeningService : Service() {
         override fun onRmsChanged(rmsdB: Float) = Unit
         override fun onBufferReceived(buffer: ByteArray?) = Unit
         override fun onEndOfSpeech() = restartListening()
-        override fun onPartialResults(partialResults: Bundle?) {
-            handleResults(partialResults)
-        }
+        override fun onPartialResults(partialResults: Bundle?) = handleResults(partialResults)
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
         override fun onError(error: Int) = restartListening()
         override fun onResults(results: Bundle?) {
@@ -90,17 +88,18 @@ class HotwordListeningService : Service() {
 
     private fun handleResults(bundle: Bundle?) {
         val matches = bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: return
-        if (matches.any { isWakePhrase(it) }) {
-            openAssistant()
-        }
+        if (matches.any { isWakePhrase(it) }) openAssistant()
     }
 
     private fun isWakePhrase(text: String): Boolean {
-        val normalized = text.lowercase(Locale.getDefault())
-            .replace(Regex("[^a-z0-9 ]"), " ")
+        val normalized = text.lowercase(Locale.ROOT)
+            .replace(Regex("[^\\p{L}\\p{N} ]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
-        return normalized.contains("hey bixby") || normalized.contains("hi bixby")
+        return normalized.contains("hey bixby") ||
+            normalized.contains("hi bixby") ||
+            normalized.contains("हे बिक्सबी") ||
+            normalized.contains("है बिक्सबी")
     }
 
     private fun openAssistant() {
