@@ -18,6 +18,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Verify Gemini secret is available
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then echo "Gemini API secret: configured"; else echo "Gemini API secret: missing"; fi
       - name: Build debug APK
         run: |
           chmod +x gradlew
