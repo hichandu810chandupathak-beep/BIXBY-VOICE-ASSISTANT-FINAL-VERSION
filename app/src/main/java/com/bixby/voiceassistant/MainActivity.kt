@@ -3,6 +3,7 @@ package com.bixby.voiceassistant
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -38,8 +39,15 @@ class MainActivity : ComponentActivity() {
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) startWakeWordListening()
+        if (granted) {
+            requestAssistantRoleIfAvailable()
+            startWakeWordListening()
+        }
     }
+
+    private val assistantRoleLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { startWakeWordListening() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
@@ -93,8 +101,18 @@ class MainActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
+            requestAssistantRoleIfAvailable()
             startWakeWordListening()
         }
+    }
+
+    private fun requestAssistantRoleIfAvailable() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
+        val roleManager = getSystemService(RoleManager::class.java) ?: return
+        if (!roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) return
+        if (roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) return
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
+        assistantRoleLauncher.launch(intent)
     }
 
     private fun applySavedTheme() {
