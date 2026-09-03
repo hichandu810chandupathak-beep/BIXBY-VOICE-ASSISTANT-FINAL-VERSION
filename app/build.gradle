@@ -13,14 +13,11 @@ android {
         targetSdk 35
         versionCode 4
         versionName "1.0.2"
+        buildConfigField 'String', 'GEMINI_API_KEY', '"' + (System.getenv('GEMINI_API_KEY') ?: '') + '"'
     }
 
     buildFeatures {
         buildConfig true
-    }
-
-    defaultConfig {
-        buildConfigField 'String', 'GEMINI_API_KEY', '"' + (System.getenv('GEMINI_API_KEY') ?: '') + '"'
     }
 
     compileOptions {
@@ -38,4 +35,5 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'com.squareup.retrofit2:retrofit:3.0.0'
     implementation 'com.squareup.retrofit2:converter-moshi:3.0.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.15.2'
 }
