@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Bixby" parent="android:style/Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Bixby" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>
