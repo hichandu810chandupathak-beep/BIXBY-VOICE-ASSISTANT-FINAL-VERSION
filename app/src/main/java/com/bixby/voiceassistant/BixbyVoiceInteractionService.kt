@@ -7,6 +7,8 @@ import android.service.voice.VoiceInteractionService
 class BixbyVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
+        // Start the best-effort background wake-word layer when Bixby is the active assistant.
+        HotwordListeningService.start(this)
     }
 
     override fun onLaunchVoiceAssistFromKeyguard() {
