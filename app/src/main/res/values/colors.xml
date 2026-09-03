@@ -2,4 +2,13 @@
 <resources>
     <color name="bixby_primary_text">#FFFFFFFF</color>
     <color name="bixby_secondary_text">#AEB4C7</color>
+    <color name="bixby_background_start">#050611</color>
+    <color name="bixby_background_center">#0B0D1C</color>
+    <color name="bixby_background_end">#050611</color>
+    <color name="bixby_panel">#111426</color>
+    <color name="bixby_panel_stroke">#252A43</color>
+    <color name="bixby_control">#111426</color>
+    <color name="bixby_control_stroke">#252A43</color>
+    <color name="bixby_mic">#252849</color>
+    <color name="bixby_mic_stroke">#575B86</color>
 </resources>
