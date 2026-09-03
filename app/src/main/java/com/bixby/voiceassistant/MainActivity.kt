@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -66,9 +67,14 @@ class MainActivity : AppCompatActivity() {
         status = findViewById(R.id.statusText)
         orb = findViewById(R.id.voiceOrb)
 
+        if (!isSupportedDevice()) {
+            status.text = "Device not supported"
+            orb.text = "●"
+            return
+        }
+
         tts = TextToSpeech(this) { result ->
             if (result == TextToSpeech.SUCCESS) {
-                tts.language = Locale.forLanguageTag("hi-IN")
                 tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         runOnUiThread {
@@ -109,8 +115,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun isSupportedDevice(): Boolean {
+        return Build.MANUFACTURER.equals("samsung", ignoreCase = true) &&
+            Build.MODEL.equals("SM-A166P", ignoreCase = true)
+    }
+
     private fun requestAssistantRoleIfAvailable() {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         val roleManager = getSystemService(RoleManager::class.java) ?: return
         if (!roleManager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) return
         if (!roleManager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) {
@@ -178,6 +189,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun listen() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            status.text = "Voice recognition unavailable"
+            return
+        }
         if (::speech.isInitialized) speech.destroy()
         speechHandler.removeCallbacksAndMessages(null)
         listeningByButton = true
@@ -233,7 +248,16 @@ class MainActivity : AppCompatActivity() {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
         }
-        speech.startListening(intent)
+        try {
+            speech.startListening(intent)
+        } catch (_: Exception) {
+            listeningByButton = false
+            speech.destroy()
+            stopAnimation()
+            status.text = "How can I help?"
+            orb.text = "●"
+            startIdleAnimation()
+        }
     }
 
     private fun askGemini(userText: String) {
@@ -314,7 +338,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun speak(text: String) {
-        if (::tts.isInitialized) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "BIXBY_RESPONSE")
+        if (!::tts.isInitialized) return
+        val language = if (text.any { it in '\u0900'..'\u097F' }) {
+            Locale.forLanguageTag("hi-IN")
+        } else {
+            Locale.forLanguageTag("en-US")
+        }
+        val result = tts.setLanguage(language)
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            tts.setLanguage(Locale.forLanguageTag("en-US"))
+        }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "BIXBY_RESPONSE")
     }
 
     override fun onDestroy() {
