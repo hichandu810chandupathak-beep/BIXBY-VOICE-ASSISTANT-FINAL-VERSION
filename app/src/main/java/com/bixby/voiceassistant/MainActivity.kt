@@ -21,6 +21,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -32,6 +39,14 @@ class MainActivity : AppCompatActivity() {
     private var animationSet = mutableListOf<ObjectAnimator>()
     private var listeningByButton = false
     private val speechHandler = Handler(Looper.getMainLooper())
+    private val gemini: GeminiApi by lazy {
+        val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+        Retrofit.Builder()
+            .baseUrl("https://generativelanguage.googleapis.com/")
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(GeminiApi::class.java)
+    }
 
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -116,25 +131,49 @@ class MainActivity : AppCompatActivity() {
 
     private fun startIdleAnimation() {
         clearAnimations()
-        val outer = findViewById<View>(R.id.orb_outer); val middle = findViewById<View>(R.id.orb_middle); val glow = findViewById<View>(R.id.orb_glow)
-        addPulse(outer, 1f, 1.035f, 2600L); addPulse(middle, 1f, 1.055f, 2200L, 120L); addPulse(glow, 1f, 1.10f, 1800L, 220L); addPulse(orb, 1f, 1.07f, 1600L, 280L); addRotation(outer, -360f, 14000L); addRotation(middle, 360f, 10000L, 180L)
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+        addPulse(outer, 1f, 1.035f, 2600L)
+        addPulse(middle, 1f, 1.055f, 2200L, 120L)
+        addPulse(glow, 1f, 1.10f, 1800L, 220L)
+        addPulse(orb, 1f, 1.07f, 1600L, 280L)
+        addRotation(outer, -360f, 14000L)
+        addRotation(middle, 360f, 10000L, 180L)
     }
 
     private fun startListeningAnimation() {
         clearAnimations()
-        val outer = findViewById<View>(R.id.orb_outer); val middle = findViewById<View>(R.id.orb_middle); val glow = findViewById<View>(R.id.orb_glow)
-        addPulse(outer, 1f, 1.07f, 1000L); addPulse(middle, 1f, 1.10f, 850L, 80L); addPulse(glow, 1f, 1.16f, 700L, 140L); addPulse(orb, 1f, 1.16f, 700L, 180L); addRotation(outer, -360f, 4200L); addRotation(middle, 360f, 3000L, 100L)
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+        addPulse(outer, 1f, 1.07f, 1000L)
+        addPulse(middle, 1f, 1.10f, 850L, 80L)
+        addPulse(glow, 1f, 1.16f, 700L, 140L)
+        addPulse(orb, 1f, 1.16f, 700L, 180L)
+        addRotation(outer, -360f, 4200L)
+        addRotation(middle, 360f, 3000L, 100L)
     }
 
     private fun startProcessingAnimation() {
         clearAnimations()
-        val outer = findViewById<View>(R.id.orb_outer); val middle = findViewById<View>(R.id.orb_middle); val glow = findViewById<View>(R.id.orb_glow)
-        addPulse(outer, 1f, 1.045f, 1800L); addPulse(middle, 1f, 1.065f, 1500L, 100L); addPulse(glow, 1f, 1.12f, 1200L, 180L); addPulse(orb, 1f, 1.10f, 1100L, 220L); addRotation(outer, -360f, 9000L); addRotation(middle, 360f, 7000L, 120L)
+        val outer = findViewById<View>(R.id.orb_outer)
+        val middle = findViewById<View>(R.id.orb_middle)
+        val glow = findViewById<View>(R.id.orb_glow)
+        addPulse(outer, 1f, 1.045f, 1800L)
+        addPulse(middle, 1f, 1.065f, 1500L, 100L)
+        addPulse(glow, 1f, 1.12f, 1200L, 180L)
+        addPulse(orb, 1f, 1.10f, 1100L, 220L)
+        addRotation(outer, -360f, 9000L)
+        addRotation(middle, 360f, 7000L, 120L)
     }
 
     private fun stopAnimation() {
         clearAnimations()
-        findViewById<View>(R.id.orb_outer).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start(); findViewById<View>(R.id.orb_middle).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start(); findViewById<View>(R.id.orb_glow).animate().scaleX(1f).scaleY(1f).setDuration(180).start(); orb.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_outer).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_middle).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_glow).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        orb.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
     }
 
     private fun listen() {
@@ -146,7 +185,11 @@ class MainActivity : AppCompatActivity() {
         speech.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { status.text = "Listening..."; orb.text = "●"; startListeningAnimation() }
             override fun onBeginningOfSpeech() { status.text = "I'm listening..."; orb.text = "●"; startListeningAnimation() }
-            override fun onRmsChanged(rmsdB: Float) { val normalized = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f); val target = 1.04f + normalized * .14f; orb.animate().scaleX(target).scaleY(target).setDuration(90L).start() }
+            override fun onRmsChanged(rmsdB: Float) {
+                val normalized = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+                val target = 1.04f + normalized * .14f
+                orb.animate().scaleX(target).scaleY(target).setDuration(90L).start()
+            }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { status.text = "Processing..."; orb.text = "●"; startProcessingAnimation() }
             override fun onError(error: Int) { listeningByButton = false; stopAnimation(); status.text = "How can I help?"; orb.text = "●"; startIdleAnimation() }
@@ -154,33 +197,135 @@ class MainActivity : AppCompatActivity() {
                 listeningByButton = false
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
                 stopAnimation()
-                if (text.isBlank()) { status.text = "How can I help?"; orb.text = "●"; startIdleAnimation(); return }
+                if (text.isBlank()) {
+                    status.text = "How can I help?"
+                    orb.text = "●"
+                    startIdleAnimation()
+                    return
+                }
                 val command = extractBixbyCommand(text)
-                if (command != null && command.isBlank()) { status.text = "Bixby activated"; orb.text = "●"; speak("हाँ, बताइए") }
-                else { status.text = command ?: text; orb.text = "●"; startIdleAnimation() }
+                if (command != null && command.isBlank()) {
+                    status.text = "Bixby activated"
+                    orb.text = "●"
+                    speak("हाँ, बताइए")
+                    return
+                }
+                val requestText = command ?: text
+                val localResult = CommandExecutor.execute(this@MainActivity, requestText)
+                if (localResult != null) {
+                    status.text = localResult
+                    orb.text = "●"
+                    speak(localResult)
+                } else {
+                    askGemini(requestText)
+                }
             }
-            override fun onPartialResults(partialResults: Bundle?) { val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty(); if (partial.isNotBlank()) status.text = partial }
+            override fun onPartialResults(partialResults: Bundle?) {
+                val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+                if (partial.isNotBlank()) status.text = partial
+            }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN"); putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN"); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true); putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3) }
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        }
         speech.startListening(intent)
+    }
+
+    private fun askGemini(userText: String) {
+        val key = BuildConfig.GEMINI_API_KEY.trim()
+        if (key.isBlank()) {
+            status.text = "API key not configured"
+            speak("Gemini API key अभी configure नहीं है।")
+            startIdleAnimation()
+            return
+        }
+        status.text = "Thinking..."
+        startProcessingAnimation()
+        val prompt = """
+            You are Bixby, a concise Android voice assistant for a Samsung Galaxy A16 5G.
+            Reply naturally to the user's request. Prefer Hindi when the user speaks Hindi/Hinglish and English when the user speaks English.
+            Keep spoken answers short and useful. Do not mention being an AI unless asked.
+            User request: $userText
+        """.trimIndent()
+        gemini.generateContent(
+            model = "gemini-3.7-flash",
+            apiKey = key,
+            request = GeminiRequest(listOf(GeminiContent(listOf(GeminiPart(prompt)))))
+        ).enqueue(object : Callback<GeminiResponse> {
+            override fun onResponse(call: Call<GeminiResponse>, response: Response<GeminiResponse>) {
+                val answer = response.body()?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim().orEmpty()
+                runOnUiThread {
+                    if (!response.isSuccessful || answer.isBlank()) {
+                        status.text = "I couldn't complete that."
+                        speak("माफ कीजिए, अभी उसका जवाब नहीं मिल पाया।")
+                    } else {
+                        status.text = answer
+                        speak(answer)
+                    }
+                    startIdleAnimation()
+                }
+            }
+
+            override fun onFailure(call: Call<GeminiResponse>, t: Throwable) {
+                runOnUiThread {
+                    status.text = "Connection problem"
+                    speak("अभी इंटरनेट कनेक्शन में समस्या है।")
+                    startIdleAnimation()
+                }
+            }
+        })
     }
 
     private fun stopListening() {
         listeningByButton = false
         speechHandler.removeCallbacksAndMessages(null)
-        if (::speech.isInitialized) { speech.stopListening(); speech.cancel(); speech.destroy() }
-        stopAnimation(); status.text = "How can I help?"; orb.text = "●"; startIdleAnimation()
+        if (::speech.isInitialized) {
+            speech.stopListening()
+            speech.cancel()
+            speech.destroy()
+        }
+        stopAnimation()
+        status.text = "How can I help?"
+        orb.text = "●"
+        startIdleAnimation()
     }
 
     private fun extractBixbyCommand(text: String): String? {
-        val normalized = text.trim().lowercase(Locale.ROOT).replace(Regex("[\\p{Punct}]+"), " ").replace(Regex("\\s+"), " ").trim()
-        return when { normalized == "bixby" -> ""; normalized.startsWith("bixby ") -> text.trim().substring(5).trim(); normalized == "hey bixby" -> ""; normalized.startsWith("hey bixby ") -> text.trim().substring(10).trim(); normalized == "हे बिक्सबी" -> ""; normalized.startsWith("हे बिक्सबी ") -> text.trim().substring(10).trim(); normalized == "है बिक्सबी" -> ""; normalized.startsWith("है बिक्सबी ") -> text.trim().substring(10).trim(); else -> null }
+        val normalized = text.trim().lowercase(Locale.ROOT)
+            .replace(Regex("[\\p{Punct}]+"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return when {
+            normalized == "bixby" -> ""
+            normalized.startsWith("bixby ") -> text.trim().substring(5).trim()
+            normalized == "hey bixby" -> ""
+            normalized.startsWith("hey bixby ") -> text.trim().substring(10).trim()
+            normalized == "हे बिक्सबी" -> ""
+            normalized.startsWith("हे बिक्सबी ") -> text.trim().substring(10).trim()
+            normalized == "है बिक्सबी" -> ""
+            normalized.startsWith("है बिक्सबी ") -> text.trim().substring(10).trim()
+            else -> null
+        }
     }
 
-    private fun speak(text: String) { if (::tts.isInitialized) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "BIXBY_RESPONSE") }
+    private fun speak(text: String) {
+        if (::tts.isInitialized) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "BIXBY_RESPONSE")
+    }
 
     override fun onDestroy() {
-        listeningByButton = false; speechHandler.removeCallbacksAndMessages(null); clearAnimations(); if (::speech.isInitialized) speech.destroy(); if (::tts.isInitialized) { tts.stop(); tts.shutdown() }; super.onDestroy()
+        listeningByButton = false
+        speechHandler.removeCallbacksAndMessages(null)
+        clearAnimations()
+        if (::speech.isInitialized) speech.destroy()
+        if (::tts.isInitialized) {
+            tts.stop()
+            tts.shutdown()
+        }
+        super.onDestroy()
     }
 }
