@@ -17,7 +17,6 @@ object CommandExecutor {
         val text = original.lowercase(Locale.ROOT).replace(Regex("\\s+"), " ").trim()
         if (text.isBlank()) return null
 
-        // Global navigation and app closing.
         when {
             text == "home" || text.contains("go home") || text.contains("home screen") || text.contains("होम स्क्रीन") || text == "होम" ->
                 return global(context, AccessibilityService.GLOBAL_ACTION_HOME, "होम स्क्रीन खोल दी।")
@@ -37,7 +36,6 @@ object CommandExecutor {
                 return global(context, AccessibilityService.GLOBAL_ACTION_HOME, "ऐप बंद करके होम स्क्रीन पर आ गया।")
         }
 
-        // Accessibility-backed UI actions.
         if (text.contains("scroll down") || text.contains("swipe down") || text.contains("नीचे स्क्रॉल") || text.contains("नीचे करो"))
             return accessibilityScroll(true)
         if (text.contains("scroll up") || text.contains("swipe up") || text.contains("ऊपर स्क्रॉल") || text.contains("ऊपर करो"))
@@ -57,7 +55,6 @@ object CommandExecutor {
             return if (AccessibilityCommandService.clickText(clickTarget)) "ठीक है, कर दिया।" else "वह बटन या विकल्प नहीं मिला।"
         }
 
-        // Flashlight with explicit commands and conversational follow-ups.
         val flashlightRequested = containsAny(text, "flashlight", "torch", "फ्लैशलाइट", "टॉर्च")
         val flashlightOff = containsAny(text, "turn off", "switch off", "shut off", "बंद", "ऑफ")
         val flashlightOnRequest = containsAny(text, "turn on", "switch on", "enable", "चालू", "ऑन")
@@ -66,7 +63,6 @@ object CommandExecutor {
             return setFlashlight(context, !(flashlightOff || flashlightFollowUpOff || !flashlightOnRequest && flashlightRequested && text.endsWith("off")))
         }
 
-        // Volume / mute.
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         if (containsAny(text, "volume up", "increase volume", "louder", "volume बढ़ा", "आवाज़ बढ़ा", "आवाज बढ़ा")) {
             audio.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
@@ -85,7 +81,6 @@ object CommandExecutor {
             return "आवाज़ म्यूट कर दी।"
         }
 
-        // Common device destinations.
         if (containsAny(text, "wifi", "wi-fi", "वाईफाई", "वाई-फाई"))
             return open(context, Intent(Settings.ACTION_WIFI_SETTINGS), "वाई-फाई सेटिंग्स खोल रहा हूँ।")
         if (containsAny(text, "bluetooth", "ब्लूटूथ"))
@@ -97,7 +92,6 @@ object CommandExecutor {
         if (containsAny(text, "settings", "setting", "सेटिंग", "सेटिंग्स"))
             return open(context, Intent(Settings.ACTION_SETTINGS), "सेटिंग्स खोल रहा हूँ।")
 
-        // Launch apps through launcher activities so Android package-visibility rules do not hide them.
         val openMatch = Regex("(?:open|launch|start|run|खोलो|खोल|चलाओ|चलाएं|चालू करो)\\s+(.+)", RegexOption.IGNORE_CASE).find(original)
         if (openMatch != null) {
             val requested = openMatch.groupValues[1].trim()
@@ -208,6 +202,30 @@ object CommandExecutor {
             "play store" to "play store", "प्ले स्टोर" to "play store"
         )
         val target = aliases[normalized] ?: normalized
+
+        // First use stable package-name fallbacks for common apps. This prevents
+        // Android package-visibility/launcher-label differences from sending a
+        // real app command to Gemini.
+        val knownPackages = mapOf(
+            "youtube" to "com.google.android.youtube",
+            "chrome" to "com.android.chrome",
+            "whatsapp" to "com.whatsapp",
+            "instagram" to "com.instagram.android",
+            "facebook" to "com.facebook.katana",
+            "gmail" to "com.google.android.gm",
+            "maps" to "com.google.android.apps.maps",
+            "camera" to "com.sec.android.app.camera",
+            "phone" to "com.samsung.android.dialer",
+            "messages" to "com.samsung.android.messaging",
+            "play store" to "com.android.vending"
+        )
+        val knownPackage = knownPackages[target]
+        if (knownPackage != null) {
+            try {
+                if (pm.getLaunchIntentForPackage(knownPackage) != null) return knownPackage
+            } catch (_: Exception) { }
+        }
+
         val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val activities = pm.queryIntentActivities(launcherIntent, 0)
         return activities.firstOrNull { info ->
