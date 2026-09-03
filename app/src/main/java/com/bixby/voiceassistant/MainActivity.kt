@@ -103,6 +103,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun addRotation(view: View, degrees: Float, durationMs: Long, delayMs: Long = 0L) {
+        ObjectAnimator.ofFloat(view, View.ROTATION, 0f, degrees).apply {
+            duration = durationMs
+            startDelay = delayMs
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            animationSet.add(this)
+            start()
+        }
+    }
+
     private fun startIdleAnimation() {
         clearAnimations()
         val outer = findViewById<View>(R.id.orb_outer)
@@ -113,6 +124,8 @@ class MainActivity : ComponentActivity() {
         addPulse(middle, 1.00f, 1.055f, 2200L, 120L)
         addPulse(glow, 1.00f, 1.10f, 1800L, 220L)
         addPulse(orb, 1.00f, 1.07f, 1600L, 280L)
+        addRotation(outer, -360f, 14000L)
+        addRotation(middle, 360f, 10000L, 180L)
     }
 
     private fun startListeningAnimation() {
@@ -125,12 +138,14 @@ class MainActivity : ComponentActivity() {
         addPulse(middle, 1.00f, 1.10f, 850L, 80L)
         addPulse(glow, 1.00f, 1.16f, 700L, 140L)
         addPulse(orb, 1.00f, 1.16f, 700L, 180L)
+        addRotation(outer, -360f, 4200L)
+        addRotation(middle, 360f, 3000L, 100L)
     }
 
     private fun stopAnimation() {
         clearAnimations()
-        findViewById<View>(R.id.orb_outer).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
-        findViewById<View>(R.id.orb_middle).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_outer).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start()
+        findViewById<View>(R.id.orb_middle).animate().rotation(0f).scaleX(1f).scaleY(1f).setDuration(180).start()
         findViewById<View>(R.id.orb_glow).animate().scaleX(1f).scaleY(1f).setDuration(180).start()
         orb.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
     }
