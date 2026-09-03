@@ -9,6 +9,8 @@ import android.provider.Settings
 import java.util.Locale
 
 object CommandExecutor {
+    private var flashlightOn = false
+
     fun execute(context: Context, raw: String): String? {
         val text = raw.trim().lowercase(Locale.ROOT)
         if (text.isBlank()) return null
@@ -32,16 +34,11 @@ object CommandExecutor {
         }
 
         // Accessibility-backed UI actions.
-        if (text.contains("scroll down") || text.contains("नीचे स्क्रॉल") || text.contains("नीचे करो")) {
-            return accessibilityScroll(true)
-        }
-        if (text.contains("scroll up") || text.contains("ऊपर स्क्रॉल") || text.contains("ऊपर करो")) {
-            return accessibilityScroll(false)
-        }
+        if (text.contains("scroll down") || text.contains("नीचे स्क्रॉल") || text.contains("नीचे करो")) return accessibilityScroll(true)
+        if (text.contains("scroll up") || text.contains("ऊपर स्क्रॉल") || text.contains("ऊपर करो")) return accessibilityScroll(false)
 
         // Type text into the currently focused/editable field.
-        val typeMatch = Regex("(?:type|enter|write|input|लिखो|लिखें|टाइप|डालो|भरें)\\s+(.+)", RegexOption.IGNORE_CASE)
-            .find(raw)
+        val typeMatch = Regex("(?:type|enter|write|input|लिखो|लिखें|टाइप|डालो|भरें)\\s+(.+)", RegexOption.IGNORE_CASE).find(raw)
         if (typeMatch != null) {
             val value = typeMatch.groupValues[1].trim()
             if (!AccessibilityCommandService.isEnabled()) return "फोन कंट्रोल के लिए Accessibility Service को एक बार चालू करना होगा।"
@@ -49,23 +46,28 @@ object CommandExecutor {
             return if (AccessibilityCommandService.setText(value)) "ठीक है, टेक्स्ट डाल दिया।" else "अभी टेक्स्ट वाले बॉक्स में नहीं लिख पाया।"
         }
 
-        val clickTarget = Regex("(?:click|tap|press|क्लिक|टैप|दबाओ)\\s+(.+)", RegexOption.IGNORE_CASE)
-            .find(raw)?.groupValues?.getOrNull(1)?.trim()
+        val clickTarget = Regex("(?:click|tap|press|क्लिक|टैप|दबाओ)\\s+(.+)", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.getOrNull(1)?.trim()
         if (!clickTarget.isNullOrBlank()) {
             if (!AccessibilityCommandService.isEnabled()) return "फोन कंट्रोल के लिए Accessibility Service को एक बार चालू करना होगा।"
             return if (AccessibilityCommandService.clickText(clickTarget)) "ठीक है, कर दिया।" else "वह बटन या विकल्प नहीं मिला।"
         }
 
-        // Flashlight.
-        if (text.contains("flashlight") || text.contains("torch") || text.contains("फ्लैशलाइट") || text.contains("टॉर्च")) {
+        // Flashlight, including conversational follow-ups such as "turn it off".
+        val flashlightRequested = text.contains("flashlight") || text.contains("torch") || text.contains("फ्लैशलाइट") || text.contains("टॉर्च")
+        val flashlightOffFollowUp = flashlightOn && (
+            text == "off" || text == "turn off" || text == "turn it off" || text == "switch it off" ||
+                text == "बंद करो" || text == "इसे बंद करो" || text == "बंद कर दो" || text == "इसे बंद कर दो"
+            )
+        if (flashlightRequested || flashlightOffFollowUp) {
             return try {
                 val camera = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
                 val id = camera.cameraIdList.firstOrNull { info ->
                     camera.getCameraCharacteristics(info).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
                 } ?: return "इस फोन पर फ्लैशलाइट उपलब्ध नहीं है।"
-                val state = text.contains("off") || text.contains("बंद")
-                camera.setTorchMode(id, !state)
-                if (state) "फ्लैशलाइट बंद कर दी।" else "फ्लैशलाइट चालू कर दी।"
+                val stateOff = text.contains("off") || text.contains("बंद") || flashlightOffFollowUp
+                camera.setTorchMode(id, !stateOff)
+                flashlightOn = !stateOff
+                if (stateOff) "फ्लैशलाइट बंद कर दी।" else "फ्लैशलाइट चालू कर दी।"
             } catch (_: Exception) {
                 "फ्लैशलाइट बदल नहीं पाई।"
             }
@@ -81,7 +83,6 @@ object CommandExecutor {
             audio.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
             return "आवाज़ कम कर दी।"
         }
-        // Check unmute before mute because "unmute" contains "mute".
         if (text.contains("unmute") || text.contains("म्यूट हटाओ")) {
             audio.adjustVolume(AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
             return "म्यूट हटा दिया।"
@@ -92,23 +93,14 @@ object CommandExecutor {
         }
 
         // Common settings destinations.
-        if (text.contains("wifi") || text.contains("वाईफाई")) {
-            open(context, Intent(Settings.ACTION_WIFI_SETTINGS), "वाई-फाई सेटिंग्स खोल रहा हूँ।")?.let { return it }
-        }
-        if (text.contains("bluetooth") || text.contains("ब्लूटूथ")) {
-            open(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS), "ब्लूटूथ सेटिंग्स खोल रहा हूँ।")?.let { return it }
-        }
-        if (text.contains("display settings") || text.contains("डिस्प्ले सेटिंग")) {
-            open(context, Intent(Settings.ACTION_DISPLAY_SETTINGS), "डिस्प्ले सेटिंग्स खोल रहा हूँ।")?.let { return it }
-        }
-        if (text.contains("sound settings") || text.contains("sound") || text.contains("साउंड")) {
-            open(context, Intent(Settings.ACTION_SOUND_SETTINGS), "साउंड सेटिंग्स खोल रहा हूँ।")?.let { return it }
-        }
-        if (text.contains("settings") || text.contains("setting") || text.contains("सेटिंग")) {
-            open(context, Intent(Settings.ACTION_SETTINGS), "सेटिंग्स खोल रहा हूँ।")?.let { return it }
-        }
+        if (text.contains("wifi") || text.contains("वाईफाई")) open(context, Intent(Settings.ACTION_WIFI_SETTINGS), "वाई-फाई सेटिंग्स खोल रहा हूँ।")?.let { return it }
+        if (text.contains("bluetooth") || text.contains("ब्लूटूथ")) open(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS), "ब्लूटूथ सेटिंग्स खोल रहा हूँ।")?.let { return it }
+        if (text.contains("display settings") || text.contains("डिस्प्ले सेटिंग")) open(context, Intent(Settings.ACTION_DISPLAY_SETTINGS), "डिस्प्ले सेटिंग्स खोल रहा हूँ।")?.let { return it }
+        if (text.contains("sound settings") || text.contains("sound") || text.contains("साउंड")) open(context, Intent(Settings.ACTION_SOUND_SETTINGS), "साउंड सेटिंग्स खोल रहा हूँ।")?.let { return it }
+        if (text.contains("settings") || text.contains("setting") || text.contains("सेटिंग")) open(context, Intent(Settings.ACTION_SETTINGS), "सेटिंग्स खोल रहा हूँ।")?.let { return it }
 
-        // Launch installed apps by spoken display name, not only hardcoded package IDs.
+        // Launch apps by querying launcher activities. This works with Android package visibility
+        // restrictions without requiring QUERY_ALL_PACKAGES.
         val openMatch = Regex("(?:open|launch|start|खोलो|खोल|चलाओ|चालू करो)\\s+(.+)", RegexOption.IGNORE_CASE).find(raw)
         if (openMatch != null) {
             val requested = openMatch.groupValues[1].trim()
@@ -124,7 +116,6 @@ object CommandExecutor {
             return "$requested नाम का ऐप इस फोन में नहीं मिला।"
         }
 
-        // Dial/call screen.
         if (text.startsWith("call ") || text.startsWith("कॉल ")) {
             val number = raw.replaceFirst(Regex("(?i)^\\s*(call|कॉल)\\s*"), "").trim()
             if (number.isNotBlank()) {
@@ -170,10 +161,11 @@ object CommandExecutor {
     private fun findInstalledApp(context: Context, spokenName: String): String? {
         val pm = context.packageManager
         val normalized = spokenName.trim().lowercase(Locale.ROOT)
-        val apps = pm.getInstalledApplications(0)
-        return apps.firstOrNull {
-            val label = pm.getApplicationLabel(it).toString().lowercase(Locale.ROOT)
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val activities = pm.queryIntentActivities(launcherIntent, 0)
+        return activities.firstOrNull { info ->
+            val label = info.loadLabel(pm).toString().lowercase(Locale.ROOT)
             label == normalized || label.contains(normalized) || normalized.contains(label)
-        }?.packageName
+        }?.activityInfo?.packageName
     }
 }
