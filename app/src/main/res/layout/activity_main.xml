@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_main"
     android:fitsSystemWindows="true">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -13,11 +14,13 @@
         android:paddingEnd="22dp"
         android:paddingTop="18dp"
         android:paddingBottom="18dp">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
+
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -28,16 +31,19 @@
                 android:textSize="21sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
+
             <ImageButton
                 android:id="@+id/themeButton"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:background="@drawable/round_control"
+                android:elevation="2dp"
                 android:padding="9dp"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_sun"
                 android:contentDescription="Theme" />
         </LinearLayout>
+
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
@@ -46,7 +52,9 @@
             android:gravity="center"
             android:text="How can I help?"
             android:textColor="@color/bixby_secondary_text"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:alpha="0.96" />
+
         <FrameLayout
             android:id="@+id/orbContainer"
             android:layout_width="match_parent"
@@ -54,23 +62,91 @@
             android:layout_weight="1"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp">
-            <View android:id="@+id/orb_outer" android:layout_width="318dp" android:layout_height="318dp" android:layout_gravity="center" android:background="@drawable/orb_outer" />
-            <View android:id="@+id/orb_middle" android:layout_width="276dp" android:layout_height="276dp" android:layout_gravity="center" android:background="@drawable/orb_middle" />
-            <View android:id="@+id/orb_glow" android:layout_width="244dp" android:layout_height="244dp" android:layout_gravity="center" android:background="@drawable/orb_glow" />
-            <TextView android:id="@+id/voiceOrb" android:layout_width="204dp" android:layout_height="204dp" android:layout_gravity="center" android:background="@drawable/orb_inner" android:gravity="center" android:text="" android:textColor="@android:color/transparent" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center|bottom" android:layout_marginBottom="22dp" android:text="HEY BIXBY" android:textColor="@color/bixby_secondary_text" android:textSize="11sp" android:textStyle="bold" android:letterSpacing="0.18" />
+
+            <View
+                android:id="@+id/orb_outer"
+                android:layout_width="318dp"
+                android:layout_height="318dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_outer" />
+
+            <View
+                android:id="@+id/orb_middle"
+                android:layout_width="276dp"
+                android:layout_height="276dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_middle" />
+
+            <View
+                android:id="@+id/orb_glow"
+                android:layout_width="244dp"
+                android:layout_height="244dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_glow"
+                android:alpha="0.94" />
+
+            <TextView
+                android:id="@+id/voiceOrb"
+                android:layout_width="204dp"
+                android:layout_height="204dp"
+                android:layout_gravity="center"
+                android:background="@drawable/orb_inner"
+                android:elevation="5dp"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@android:color/transparent" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|bottom"
+                android:layout_marginBottom="22dp"
+                android:text="HEY BIXBY"
+                android:textColor="@color/bixby_secondary_text"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.18"
+                android:alpha="0.9" />
         </FrameLayout>
+
         <LinearLayout
             android:id="@+id/actionPanel"
             android:layout_width="match_parent"
-            android:layout_height="58dp"
+            android:layout_height="62dp"
             android:background="@drawable/action_panel"
+            android:elevation="3dp"
             android:gravity="center_vertical"
             android:paddingStart="18dp"
-            android:paddingEnd="18dp">
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Ask Bixby anything" android:textColor="@color/bixby_primary_text" android:textSize="15sp" />
-            <ImageButton android:id="@+id/micButton" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/mic_background" android:contentDescription="Microphone" android:padding="12dp" android:src="@drawable/ic_mic" android:scaleType="centerInside" />
+            android:paddingEnd="10dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Ask Bixby anything"
+                android:textColor="@color/bixby_primary_text"
+                android:textSize="15sp" />
+
+            <ImageButton
+                android:id="@+id/micButton"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/mic_background"
+                android:elevation="4dp"
+                android:contentDescription="Microphone"
+                android:padding="12dp"
+                android:src="@drawable/ic_mic"
+                android:scaleType="centerInside" />
         </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:gravity="center" android:text="Tap the microphone or say “Hey Bixby”" android:textColor="@color/bixby_secondary_text" android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:text="Tap the microphone or say “Hey Bixby”"
+            android:textColor="@color/bixby_secondary_text"
+            android:textSize="12sp"
+            android:alpha="0.88" />
     </LinearLayout>
 </FrameLayout>
