@@ -18,7 +18,7 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.core.app.ActivityCompat
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import java.util.Locale
 
@@ -35,6 +35,12 @@ class MainActivity : ComponentActivity() {
     private var continuousListening = false
     private var restartingSpeech = false
     private val speechHandler = Handler(Looper.getMainLooper())
+
+    private val audioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) startWakeWordListening()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applySavedTheme()
@@ -86,15 +92,8 @@ class MainActivity : ComponentActivity() {
         startIdleAnimation()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 100)
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            startWakeWordListening()
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startWakeWordListening()
         }
     }
