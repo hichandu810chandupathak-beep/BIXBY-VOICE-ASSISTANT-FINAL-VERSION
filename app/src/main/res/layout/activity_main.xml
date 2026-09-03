@@ -141,6 +141,7 @@
                 android:contentDescription="Microphone"
                 android:padding="12dp"
                 android:src="@drawable/ic_mic"
+                android:tint="@color/bixby_mic_icon"
                 android:scaleType="centerInside" />
         </LinearLayout>
 
