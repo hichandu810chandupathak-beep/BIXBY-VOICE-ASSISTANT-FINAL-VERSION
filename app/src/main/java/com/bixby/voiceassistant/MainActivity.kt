@@ -77,9 +77,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent == null) return
         setIntent(intent)
         if (intent.getBooleanExtra("HOTWORD_TRIGGERED", false)) {
             launchedByHotword = true
