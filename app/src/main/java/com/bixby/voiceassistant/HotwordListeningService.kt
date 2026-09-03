@@ -18,12 +18,7 @@ import android.speech.SpeechRecognizer
 import androidx.core.app.NotificationCompat
 import java.util.Locale
 
-/**
- * Best-effort background wake-word layer for "Hey Bixby".
- * SpeechRecognizer is session based on Android, so a new recognition session
- * is started internally after each completed/failed session. This restart is
- * silent and does not open the UI or require a button press.
- */
+/** Best-effort background wake-word layer for Bixby. */
 class HotwordListeningService : Service() {
 
     private var recognizer: SpeechRecognizer? = null
@@ -38,7 +33,7 @@ class HotwordListeningService : Service() {
         override fun onBufferReceived(buffer: ByteArray?) = Unit
         override fun onEndOfSpeech() = restartListening()
         override fun onPartialResults(partialResults: Bundle?) {
-            if (handleResults(partialResults)) restartListening()
+            if (handleResults(partialResults)) return
         }
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
         override fun onError(error: Int) = restartListening()
@@ -110,7 +105,8 @@ class HotwordListeningService : Service() {
             .replace(Regex("[^\\p{L}\\p{N} ]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
-        return normalized.contains("hey bixby") ||
+        return normalized == "bixby" ||
+            normalized.contains("hey bixby") ||
             normalized.contains("hey bix bee") ||
             normalized.contains("hi bixby") ||
             normalized.contains("हे बिक्सबी") ||
@@ -119,15 +115,16 @@ class HotwordListeningService : Service() {
 
     private fun openAssistant() {
         recognizer?.cancel()
+        recognizer?.destroy()
+        recognizer = null
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra("HOTWORD_TRIGGERED", true)
         }
         try {
             startActivity(intent)
+            stopSelf()
         } catch (_: Exception) {
-            // The foreground/background assistant service remains alive even if
-            // Android temporarily blocks background activity launch.
             wakeTriggered = false
             restartListening()
         }
