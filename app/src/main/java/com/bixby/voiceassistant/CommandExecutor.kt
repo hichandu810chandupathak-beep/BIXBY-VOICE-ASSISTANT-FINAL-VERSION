@@ -81,13 +81,14 @@ object CommandExecutor {
             audio.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
             return "आवाज़ कम कर दी।"
         }
-        if (text.contains("mute") || text.contains("silent") || text.contains("म्यूट") || text.contains("साइलेंट")) {
-            audio.adjustVolume(AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
-            return "आवाज़ म्यूट कर दी।"
-        }
+        // Check unmute before mute because "unmute" contains "mute".
         if (text.contains("unmute") || text.contains("म्यूट हटाओ")) {
             audio.adjustVolume(AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
             return "म्यूट हटा दिया।"
+        }
+        if (text.contains("mute") || text.contains("silent") || text.contains("म्यूट") || text.contains("साइलेंट")) {
+            audio.adjustVolume(AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+            return "आवाज़ म्यूट कर दी।"
         }
 
         // Common settings destinations.
