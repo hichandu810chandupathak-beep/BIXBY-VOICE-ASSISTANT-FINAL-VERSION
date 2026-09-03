@@ -33,7 +33,6 @@ class MainActivity : ComponentActivity() {
 
     private var animationSet = mutableListOf<ObjectAnimator>()
     private var continuousListening = false
-    private var restartingSpeech = false
     private val speechHandler = Handler(Looper.getMainLooper())
 
     private val audioPermissionLauncher = registerForActivityResult(
@@ -219,12 +218,10 @@ class MainActivity : ComponentActivity() {
 
     private fun listen(isWakeWordMode: Boolean) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
-        restartingSpeech = true
         if (::speech.isInitialized) speech.destroy()
         speech = SpeechRecognizer.createSpeechRecognizer(this)
         speech.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
-                restartingSpeech = false
                 status.text = if (isWakeWordMode) "Listening for Hey Bixby..." else "Listening..."
                 orb.text = "●"
                 startListeningAnimation()
