@@ -1,16 +1,16 @@
 <resources>
-    <color name="bixby_primary_text">#F5F8FF</color>
-    <color name="bixby_secondary_text">#B9C2D0</color>
-    <color name="bixby_background_start">#02070E</color>
-    <color name="bixby_background_center">#06111D</color>
-    <color name="bixby_background_end">#02070E</color>
-    <color name="bixby_panel">#121C28</color>
-    <color name="bixby_panel_stroke">#243447</color>
-    <color name="bixby_control">#101B27</color>
-    <color name="bixby_control_stroke">#2D4258</color>
-    <color name="bixby_mic">#0D7DFF</color>
-    <color name="bixby_mic_stroke">#42B8FF</color>
+    <color name="bixby_primary_text">#101722</color>
+    <color name="bixby_secondary_text">#526071</color>
+    <color name="bixby_background_start">#FFFFFF</color>
+    <color name="bixby_background_center">#F7FAFE</color>
+    <color name="bixby_background_end">#EEF4FB</color>
+    <color name="bixby_panel">#F8FBFF</color>
+    <color name="bixby_panel_stroke">#DCE5EF</color>
+    <color name="bixby_control">#F2F7FC</color>
+    <color name="bixby_control_stroke">#D5E1ED</color>
+    <color name="bixby_mic">#0B82F6</color>
+    <color name="bixby_mic_stroke">#38B8FF</color>
     <color name="bixby_mic_icon">#FFFFFF</color>
-    <color name="bixby_blue">#1595FF</color>
-    <color name="bixby_blue_bright">#39C6FF</color>
+    <color name="bixby_blue">#126FEA</color>
+    <color name="bixby_blue_bright">#27B8FF</color>
 </resources>
