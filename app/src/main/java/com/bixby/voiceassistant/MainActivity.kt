@@ -3,6 +3,7 @@ package com.bixby.voiceassistant
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.app.AlertDialog
 import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -59,8 +60,30 @@ class MainActivity : AppCompatActivity() {
         status=findViewById(R.id.statusText);orb=findViewById(R.id.voiceOrb);homeContent=findViewById(R.id.homeContent);listeningContent=findViewById(R.id.listeningContent);conversationContent=findViewById(R.id.conversationContent);userBubble=findViewById(R.id.userBubble);assistantBubble=findViewById(R.id.assistantBubble);weatherCard=findViewById(R.id.weatherCard)
         if(!isSupportedDevice()){status.text="Device not supported";return};launchedByHotword=intent.getBooleanExtra("HOTWORD_TRIGGERED",false)
         tts=TextToSpeech(this){result->if(result==TextToSpeech.SUCCESS){tts.setSpeechRate(.96f);selectMaleVoice(Locale.forLanguageTag("hi-IN"));tts.setOnUtteranceProgressListener(object:UtteranceProgressListener(){override fun onStart(id:String?){runOnUiThread{status.text="Speaking..."}};override fun onDone(id:String?){runOnUiThread{finishVoiceTurn()}};override fun onError(id:String?){runOnUiThread{finishVoiceTurn()}}})}}
-        findViewById<ImageButton>(R.id.micButton).setOnClickListener{if(ignoreNextMicTap){ignoreNextMicTap=false;return@setOnClickListener};if(voiceTurnInProgress)return@setOnClickListener;if(listeningByButton)stopListening()else listen()};findViewById<TextView>(R.id.cancelButton).setOnClickListener{stopListening()};startIdleAnimation()
+        findViewById<ImageButton>(R.id.micButton).setOnClickListener{if(ignoreNextMicTap){ignoreNextMicTap=false;return@setOnClickListener};if(voiceTurnInProgress)return@setOnClickListener;if(listeningByButton)stopListening()else listen()};findViewById<TextView>(R.id.cancelButton).setOnClickListener{stopListening()};setupUiActions();startIdleAnimation()
         if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED)audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)else{requestAssistantRoleIfAvailable();if(launchedByHotword)speechHandler.postDelayed({listen()},300L)}
+    }
+    private fun setupUiActions(){
+        findViewById<TextView>(R.id.menuButton).setOnClickListener{showMenu()}
+        findViewById<TextView>(R.id.settingsButton).setOnClickListener{showSettings()}
+        findViewById<TextView>(R.id.actionYoutube).setOnClickListener{runQuickCommand("open YouTube")}
+        findViewById<TextView>(R.id.actionMusic).setOnClickListener{runQuickCommand("play music")}
+        findViewById<TextView>(R.id.actionWeather).setOnClickListener{runQuickCommand("what's the weather today")}
+        findViewById<TextView>(R.id.actionAlarm).setOnClickListener{runQuickCommand("set an alarm")}
+    }
+    private fun showMenu(){
+        AlertDialog.Builder(this).setTitle("Bixby").setItems(arrayOf("Home","Conversation","Voice commands","Accessibility controls")){_,which->when(which){0->showHome();1->if(conversationContent.visibility!=View.VISIBLE)showHome();2->showCommandHelp();3->openAccessibilitySettings()}}.setNegativeButton("Close",null).show()
+    }
+    private fun showSettings(){
+        AlertDialog.Builder(this).setTitle("Bixby Settings").setItems(arrayOf("Assistant & voice","Accessibility controls","App settings")){_,which->when(which){0->requestAssistantRoleIfAvailable();1->openAccessibilitySettings();2->startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply{data=android.net.Uri.parse("package:$packageName")})}}.setNegativeButton("Close",null).show()
+    }
+    private fun showCommandHelp(){
+        AlertDialog.Builder(this).setTitle("Voice commands").setMessage("Try: Open YouTube\nTurn on flashlight\nTurn Wi-Fi on\nScroll down\nGo home\nOpen settings\nSet an alarm").setPositiveButton("OK",null).show()
+    }
+    private fun openAccessibilitySettings(){startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))}
+    private fun runQuickCommand(request:String){
+        val local=CommandExecutor.execute(this,request)
+        if(local!=null){showConversation(request,local);speak(local)}else{showConversation(request);askGemini(request)}
     }
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);setIntent(intent);if(intent.getBooleanExtra("HOTWORD_TRIGGERED",false)){launchedByHotword=true;speechHandler.postDelayed({listen()},200L)}}
     private fun isSupportedDevice()=Build.MANUFACTURER.equals("samsung",true)&&Build.MODEL.equals("SM-A166P",true)
