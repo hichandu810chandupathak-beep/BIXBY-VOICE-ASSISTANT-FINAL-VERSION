@@ -33,25 +33,22 @@ class MainActivity : ComponentActivity() {
     private lateinit var themeButton: ImageButton
 
     private var animationSet = mutableListOf<ObjectAnimator>()
-    private var continuousListening = false
+    private var listeningByButton = false
     private val speechHandler = Handler(Looper.getMainLooper())
 
     private val audioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            requestAssistantRoleIfAvailable()
-            startWakeWordListening()
-        }
+        if (granted) requestAssistantRoleIfAvailable()
     }
 
     private val assistantRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { startWakeWordListening() }
+    ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        applySavedTheme()
         super.onCreate(savedInstanceState)
+        applySavedTheme()
         setContentView(R.layout.activity_main)
 
         root = findViewById(R.id.rootContainer)
@@ -79,7 +76,7 @@ class MainActivity : ComponentActivity() {
                             status.text = "How can I help?"
                             orb.text = "●"
                             startIdleAnimation()
-                            if (continuousListening) scheduleWakeWordListening(350L)
+                            listeningByButton = false
                         }
                     }
 
@@ -88,21 +85,26 @@ class MainActivity : ComponentActivity() {
                             status.text = "How can I help?"
                             orb.text = "●"
                             startIdleAnimation()
-                            if (continuousListening) scheduleWakeWordListening(350L)
+                            listeningByButton = false
                         }
                     }
                 })
             }
         }
 
-        findViewById<ImageButton>(R.id.micButton).setOnClickListener { listen(false) }
+        findViewById<ImageButton>(R.id.micButton).setOnClickListener {
+            if (listeningByButton) {
+                stopListening()
+            } else {
+                listen()
+            }
+        }
         startIdleAnimation()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
             requestAssistantRoleIfAvailable()
-            startWakeWordListening()
         }
     }
 
@@ -222,25 +224,15 @@ class MainActivity : ComponentActivity() {
         orb.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
     }
 
-    private fun startWakeWordListening() {
-        continuousListening = true
-        scheduleWakeWordListening(150L)
-    }
-
-    private fun scheduleWakeWordListening(delayMs: Long) {
-        speechHandler.removeCallbacksAndMessages(null)
-        speechHandler.postDelayed({
-            if (continuousListening && !isFinishing && !isDestroyed) listen(true)
-        }, delayMs)
-    }
-
-    private fun listen(isWakeWordMode: Boolean) {
+    private fun listen() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
         if (::speech.isInitialized) speech.destroy()
+        speechHandler.removeCallbacksAndMessages(null)
+        listeningByButton = true
         speech = SpeechRecognizer.createSpeechRecognizer(this)
         speech.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
-                status.text = if (isWakeWordMode) "Listening for Hey Bixby..." else "Listening..."
+                status.text = "Listening..."
                 orb.text = "●"
                 startListeningAnimation()
             }
@@ -258,50 +250,32 @@ class MainActivity : ComponentActivity() {
                 startProcessingAnimation()
             }
             override fun onError(error: Int) {
+                listeningByButton = false
                 stopAnimation()
-                if (continuousListening && isWakeWordMode) {
-                    status.text = "Listening for Hey Bixby..."
-                    orb.text = "●"
-                    startIdleAnimation()
-                    scheduleWakeWordListening(450L)
-                } else {
-                    status.text = "Try again"
-                    orb.text = "●"
-                    startIdleAnimation()
-                }
+                status.text = "How can I help?"
+                orb.text = "●"
+                startIdleAnimation()
             }
             override fun onResults(results: Bundle?) {
+                listeningByButton = false
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
                 stopAnimation()
                 if (text.isBlank()) {
-                    status.text = if (isWakeWordMode) "Listening for Hey Bixby..." else "How can I help?"
+                    status.text = "How can I help?"
                     orb.text = "●"
                     startIdleAnimation()
-                    if (continuousListening && isWakeWordMode) scheduleWakeWordListening(250L)
                     return
                 }
 
                 val command = extractBixbyCommand(text)
-                if (command != null) {
-                    if (command.isBlank()) {
-                        status.text = "Bixby activated"
-                        orb.text = "●"
-                        speak("हाँ, बताइए")
-                    } else {
-                        status.text = command
-                        orb.text = "●"
-                        startIdleAnimation()
-                        if (continuousListening && isWakeWordMode) scheduleWakeWordListening(250L)
-                    }
-                } else if (!isWakeWordMode) {
-                    status.text = text
+                if (command != null && command.isBlank()) {
+                    status.text = "Bixby activated"
                     orb.text = "●"
-                    startIdleAnimation()
+                    speak("हाँ, बताइए")
                 } else {
-                    status.text = "Listening for Hey Bixby..."
+                    status.text = command ?: text
                     orb.text = "●"
                     startIdleAnimation()
-                    scheduleWakeWordListening(250L)
                 }
             }
             override fun onPartialResults(partialResults: Bundle?) {
@@ -310,7 +284,7 @@ class MainActivity : ComponentActivity() {
                     ?.firstOrNull()
                     ?.trim()
                     .orEmpty()
-                if (partial.isNotBlank() && !isWakeWordMode) status.text = partial
+                if (partial.isNotBlank()) status.text = partial
             }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
@@ -323,6 +297,20 @@ class MainActivity : ComponentActivity() {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
         }
         speech.startListening(intent)
+    }
+
+    private fun stopListening() {
+        listeningByButton = false
+        speechHandler.removeCallbacksAndMessages(null)
+        if (::speech.isInitialized) {
+            speech.stopListening()
+            speech.cancel()
+            speech.destroy()
+        }
+        stopAnimation()
+        status.text = "How can I help?"
+        orb.text = "●"
+        startIdleAnimation()
     }
 
     private fun extractBixbyCommand(text: String): String? {
@@ -347,7 +335,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        continuousListening = false
+        listeningByButton = false
         speechHandler.removeCallbacksAndMessages(null)
         clearAnimations()
         if (::speech.isInitialized) speech.destroy()
