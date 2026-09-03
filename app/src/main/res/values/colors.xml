@@ -10,4 +10,5 @@
     <color name="bixby_control_stroke">#B5A9CC</color>
     <color name="bixby_mic">#272133</color>
     <color name="bixby_mic_stroke">#7967B5</color>
+    <color name="bixby_mic_icon">#FFFFFF</color>
 </resources>
