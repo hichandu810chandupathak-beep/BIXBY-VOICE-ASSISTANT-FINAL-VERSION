@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout 
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootOverlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#4D000000">
+    android:background="#66000000">
 
     <!-- Lower Third Floating Bixby Sheet -->
     <LinearLayout
@@ -113,13 +111,12 @@
             </LinearLayout>
         </HorizontalScrollView>
 
-        <!-- Bottom Action Bar: Keyboard, Dynamic Listening Bar, Voice/Action -->
+        <!-- Bottom Action Bar -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:gravity="center_vertical">
 
-            <!-- Keyboard Button (Left) -->
             <TextView
                 android:id="@+id/btnKeyboard"
                 android:layout_width="40dp"
@@ -131,7 +128,6 @@
                 android:textColor="#475569"
                 android:textSize="20sp" />
 
-            <!-- Samsung Bixby Dynamic Cyan Listening Indicator Bar (Center) -->
             <View
                 android:id="@+id/bixbyListeningBar"
                 android:layout_width="90dp"
@@ -139,7 +135,6 @@
                 android:layout_centerInParent="true"
                 android:background="#0284C7" />
 
-            <!-- Mic / Re-listen Button (Right) -->
             <TextView
                 android:id="@+id/btnMicTrigger"
                 android:layout_width="40dp"
@@ -153,4 +148,4 @@
         </RelativeLayout>
 
     </LinearLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</FrameLayout>

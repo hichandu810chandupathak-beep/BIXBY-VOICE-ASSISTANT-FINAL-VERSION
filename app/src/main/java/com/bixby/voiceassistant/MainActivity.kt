@@ -1,7 +1,6 @@
-package com.bixby.voiceassistant // Keep the actual existing package name
+package com.bixby.voiceassistant
 
 import android.Manifest
-import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -9,45 +8,59 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.speech.tts.Voice
 import android.view.View
+import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var tvAssistantStatus: TextView
-    private lateinit var tvUserQuery: TextView
-    private lateinit var bixbyListeningBar: View
-    private lateinit var btnMicTrigger: View
-    private lateinit var rootOverlay: View
+
+    private var tvAssistantStatus: TextView? = null
+    private var tvUserQuery: TextView? = null
+    private var bixbyListeningBar: View? = null
+    private var btnMicTrigger: View? = null
+    private var rootOverlay: View? = null
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
-    private var barAnimator: ObjectAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        try {
+            setContentView(R.layout.activity_main)
 
-        tvAssistantStatus = findViewById(R.id.tvAssistantStatus)
-        tvUserQuery = findViewById(R.id.tvUserQuery)
-        bixbyListeningBar = findViewById(R.id.bixbyListeningBar)
-        btnMicTrigger = findViewById(R.id.btnMicTrigger)
-        rootOverlay = findViewById(R.id.rootOverlay)
+            tvAssistantStatus = findViewById(R.id.tvAssistantStatus)
+            tvUserQuery = findViewById(R.id.tvUserQuery)
+            bixbyListeningBar = findViewById(R.id.bixbyListeningBar)
+            btnMicTrigger = findViewById(R.id.btnMicTrigger)
+            rootOverlay = findViewById(R.id.rootOverlay)
 
-        rootOverlay.setOnClickListener { finish() }
-        findViewById<View>(R.id.bixbyBottomSheet).setOnClickListener { }
+            rootOverlay?.setOnClickListener { finish() }
+            findViewById<View>(R.id.bixbyBottomSheet)?.setOnClickListener { /* prevent dismiss */ }
 
-        setupSuggestionChips()
-        initMaleVoiceTTS()
-        initSpeechRecognizer()
+            setupSuggestionChips()
+            initMaleVoiceTTS()
+            initSpeechRecognizer()
 
-        btnMicTrigger.setOnClickListener { checkPermissionAndListen() }
-        checkPermissionAndListen()
+            btnMicTrigger?.setOnClickListener {
+                checkPermissionAndListen()
+            }
+        } catch (t: Throwable) {
+            // Safe Error Screen (Prevents app from force closing so we can see exact error)
+            val scrollView = ScrollView(this)
+            val errorView = TextView(this).apply {
+                text = "STARTUP ERROR:\n\n${t.message}\n\n${t.stackTraceToString()}"
+                setPadding(32, 48, 32, 48)
+                textSize = 14sp
+                setTextColor(0xFFFF4444.toInt())
+                setBackgroundColor(0xFF1E1E1E.toInt())
+            }
+            scrollView.addView(errorView)
+            setContentView(scrollView)
+        }
     }
 
     private fun setupSuggestionChips() {
@@ -63,85 +76,88 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initMaleVoiceTTS() {
-        textToSpeech = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                textToSpeech?.language = Locale.ENGLISH
+        try {
+            textToSpeech = TextToSpeech(this) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    textToSpeech?.language = Locale.ENGLISH
+                    val availableVoices = textToSpeech?.voices
+                    val maleVoice = availableVoices?.firstOrNull { voice ->
+                        val name = voice.name.lowercase(Locale.ROOT)
+                        !voice.isNetworkConnectionRequired &&
+                                (name.contains("male") || name.contains("#male") || name.contains("en-us-x-sfg#male"))
+                    } ?: availableVoices?.firstOrNull { it.name.lowercase(Locale.ROOT).contains("male") }
 
-                val availableVoices = textToSpeech?.voices
-                val maleVoice = availableVoices?.firstOrNull { voice ->
-                    val name = voice.name.lowercase(Locale.ROOT)
-                    !voice.isNetworkConnectionRequired &&
-                            (name.contains("male") || name.contains("#male") || name.contains("en-us-x-sfg#male") || name.contains("en-in-x-ahp#male"))
-                } ?: availableVoices?.firstOrNull { it.name.lowercase(Locale.ROOT).contains("male") }
-
-                if (maleVoice != null) {
-                    textToSpeech?.voice = maleVoice
-                } else {
-                    textToSpeech?.setPitch(0.80f)
-                    textToSpeech?.setSpeechRate(0.95f)
+                    if (maleVoice != null) {
+                        textToSpeech?.voice = maleVoice
+                    } else {
+                        textToSpeech?.setPitch(0.80f)
+                        textToSpeech?.setSpeechRate(0.95f)
+                    }
+                    speak("Hello! How can I help you?")
                 }
-
-                speak("Hello! How can I help you today?")
             }
+        } catch (e: Exception) {
+            tvUserQuery?.text = "TTS init failed: ${e.message}"
         }
     }
 
     private fun initSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(object : RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {
-                        tvUserQuery.text = "Listening..."
-                        startListeningAnimation()
-                    }
-                    override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {
-                        val scale = 1.0f + (rmsdB.coerceAtLeast(0f) / 10f)
-                        bixbyListeningBar.scaleX = scale.coerceIn(1.0f, 2.2f)
-                    }
-                    override fun onBufferReceived(buffer: ByteArray?) {}
-                    override fun onEndOfSpeech() { stopListeningAnimation() }
-                    override fun onError(error: Int) {
-                        stopListeningAnimation()
-                        tvUserQuery.text = "Tap mic to try again."
-                    }
-                    override fun onResults(results: Bundle?) {
-                        stopListeningAnimation()
-                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!matches.isNullOrEmpty()) handleQuery(matches[0])
-                    }
-                    override fun onPartialResults(partialResults: Bundle?) {
-                        val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!matches.isNullOrEmpty()) tvUserQuery.text = matches[0]
-                    }
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
-                })
+        try {
+            if (SpeechRecognizer.isRecognitionAvailable(this)) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+                    setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(params: Bundle?) {
+                            tvUserQuery?.text = "Listening..."
+                        }
+                        override fun onBeginningOfSpeech() {}
+                        override fun onRmsChanged(rmsdB: Float) {
+                            val scale = 1.0f + (rmsdB.coerceAtLeast(0f) / 10f)
+                            bixbyListeningBar?.scaleX = scale.coerceIn(1.0f, 2.2f)
+                        }
+                        override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onEndOfSpeech() {
+                            bixbyListeningBar?.scaleX = 1.0f
+                        }
+                        override fun onError(error: Int) {
+                            bixbyListeningBar?.scaleX = 1.0f
+                            tvUserQuery?.text = "Tap mic to speak."
+                        }
+                        override fun onResults(results: Bundle?) {
+                            bixbyListeningBar?.scaleX = 1.0f
+                            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            if (!matches.isNullOrEmpty()) {
+                                handleQuery(matches[0])
+                            }
+                        }
+                        override fun onPartialResults(partialResults: Bundle?) {
+                            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            if (!matches.isNullOrEmpty()) {
+                                tvUserQuery?.text = matches[0]
+                            }
+                        }
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                    })
+                }
             }
+        } catch (e: Exception) {
+            tvUserQuery?.text = "SpeechRecognizer init failed: ${e.message}"
         }
     }
 
     private fun handleQuery(query: String) {
-        tvUserQuery.text = query
+        tvUserQuery?.text = query
         val response = when {
             query.contains("weather", ignoreCase = true) -> "It's currently clear and 24 degrees outside."
             query.contains("alarm", ignoreCase = true) -> "Alarm set for 7:00 AM."
             query.contains("joke", ignoreCase = true) -> "Why don't scientists trust atoms? Because they make up everything!"
-            else -> "I heard you say: $query. How else can I assist?"
+            else -> "I heard: $query. How else can I help?"
         }
-        tvAssistantStatus.text = response
+        tvAssistantStatus?.text = response
         speak(response)
     }
 
     private fun speak(text: String) {
         textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "BixbyUtterance")
-    }
-
-    private fun startListeningAnimation() {
-        bixbyListeningBar.animate().alpha(1.0f).setDuration(200).start()
-    }
-
-    private fun stopListeningAnimation() {
-        bixbyListeningBar.animate().scaleX(1.0f).setDuration(200).start()
     }
 
     private fun checkPermissionAndListen() {
