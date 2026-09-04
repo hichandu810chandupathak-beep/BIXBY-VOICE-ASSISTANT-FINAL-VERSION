@@ -57,9 +57,9 @@ class MainActivity : AppCompatActivity() {
     private var listeningByButton = false
     private var launchedByHotword = false
     private var voiceTurnInProgress = false
-    private var ignoreNextMicTap = false
     private var conversationStarted = false
     private var pendingConfirmedRequest: String? = null
+    private var interactionGeneration = 0L
     private val gemini: GeminiApi by lazy {
         val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
         Retrofit.Builder().baseUrl("https://generativelanguage.googleapis.com/")
@@ -100,9 +100,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
         findViewById<ImageButton>(R.id.micButton).setOnClickListener {
-            if (ignoreNextMicTap) { ignoreNextMicTap = false; return@setOnClickListener }
-            if (voiceTurnInProgress) return@setOnClickListener
-            if (listeningByButton) stopListening() else listen()
+            if (listeningByButton) {
+                stopListening()
+            } else {
+                startFreshVoiceTurn()
+            }
         }
         findViewById<TextView>(R.id.cancelButton).setOnClickListener { stopListening() }
         setupUiActions()
@@ -188,9 +190,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun executeRequest(request: String) {
+        val generation = interactionGeneration
         val local = CommandExecutor.execute(this, request)
         if (local != null) { showConversation(request, local); speak(local) }
-        else { showConversation(request); askGemini(request) }
+        else { showConversation(request); askGemini(request, generation) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -258,12 +261,34 @@ class MainActivity : AppCompatActivity() {
         clearAnimations(); listOf(R.id.orb_outer, R.id.orb_middle, R.id.orb_glow, R.id.voiceOrb, R.id.listenOuter, R.id.listenMiddle, R.id.listenGlow).forEach { findViewById<View>(it)?.animate()?.scaleX(1f)?.scaleY(1f)?.rotation(0f)?.setDuration(180)?.start() }
     }
 
+    private fun cancelActiveSpeechRecognizer() {
+        if (::speech.isInitialized) {
+            try { speech.setRecognitionListener(null) } catch (_: Exception) {}
+            try { speech.cancel() } catch (_: Exception) {}
+            try { speech.destroy() } catch (_: Exception) {}
+        }
+    }
+
+    private fun startFreshVoiceTurn() {
+        interactionGeneration++
+        speechHandler.removeCallbacksAndMessages(null)
+        if (::tts.isInitialized) { try { tts.stop() } catch (_: Exception) {} }
+        cancelActiveSpeechRecognizer()
+        voiceTurnInProgress = false
+        listeningByButton = false
+        listen()
+    }
+
     private fun listen() {
-        if (voiceTurnInProgress) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
         if (!SpeechRecognizer.isRecognitionAvailable(this)) { status.text = "Voice recognition unavailable"; return }
-        voiceTurnInProgress = true; listeningByButton = true; speechHandler.removeCallbacksAndMessages(null); showListening(); startListeningAnimation()
-        if (::speech.isInitialized) { try { speech.setRecognitionListener(null) } catch (_: Exception) {}; try { speech.cancel() } catch (_: Exception) {}; speech.destroy() }
+        interactionGeneration++
+        voiceTurnInProgress = true
+        listeningByButton = true
+        speechHandler.removeCallbacksAndMessages(null)
+        showListening()
+        startListeningAnimation()
+        cancelActiveSpeechRecognizer()
         speech = SpeechRecognizer.createSpeechRecognizer(this)
         speech.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(p: Bundle?) { status.text = "Listening..." }
@@ -293,20 +318,21 @@ class MainActivity : AppCompatActivity() {
         try { speech.startListening(i) } catch (_: Exception) { finishVoiceTurn() }
     }
 
-    private fun askGemini(userText: String) {
+    private fun askGemini(userText: String, generation: Long) {
         val key = BuildConfig.GEMINI_API_KEY.trim()
-        if (key.isBlank()) { assistantBubble.text = "Gemini API key अभी configure नहीं है।"; speak("Gemini API key अभी configure नहीं है।"); finishVoiceTurn(); return }
+        if (key.isBlank()) { if (generation != interactionGeneration) return; assistantBubble.text = "Gemini API key अभी configure नहीं है।"; speak("Gemini API key अभी configure नहीं है।"); finishVoiceTurn(); return }
         showConversation(userText); status.text = "Thinking..."; startProcessingAnimation()
         val prompt = "You are Bixby, a highly capable conversational Android device assistant for a Samsung Galaxy A16 5G. Speak naturally like a helpful human: concise, warm, context-aware, and never robotic. Understand Hindi, Hinglish and English. Remember the current conversation context when it is visible. If a request requires a device action that the app has not executed, do not claim it happened. If an action is potentially consequential or needs user permission, ask clearly before proceeding. If the user asks a factual question, answer directly. If a request is ambiguous, ask one short clarifying question instead of guessing. Do not invent device state, contacts, messages, files, location or permissions. User request: $userText"
         gemini.generateContent("gemini-3.8-flash", key, GeminiRequest(listOf(GeminiContent(listOf(GeminiPart(prompt)))), GeminiGenerationConfig(temperature = .35, maxOutputTokens = 384))).enqueue(object : Callback<GeminiResponse> {
             override fun onResponse(c: Call<GeminiResponse>, r: Response<GeminiResponse>) {
                 val a = r.body()?.candidates.orEmpty().asSequence().flatMap { it.content?.parts.orEmpty().asSequence() }.map { it.text.trim() }.firstOrNull { it.isNotBlank() }.orEmpty()
                 runOnUiThread {
+                    if (generation != interactionGeneration) return@runOnUiThread
                     if (!r.isSuccessful || a.isBlank()) { assistantBubble.text = "माफ कीजिए, अभी उसका जवाब नहीं मिल पाया।"; speak("माफ कीजिए, अभी उसका जवाब नहीं मिल पाया।") }
                     else { assistantBubble.text = a; speak(a) }
                 }
             }
-            override fun onFailure(c: Call<GeminiResponse>, t: Throwable) { runOnUiThread { assistantBubble.text = "अभी इंटरनेट कनेक्शन में समस्या है।"; speak("अभी इंटरनेट कनेक्शन में समस्या है।") } }
+            override fun onFailure(c: Call<GeminiResponse>, t: Throwable) { runOnUiThread { if (generation != interactionGeneration) return@runOnUiThread; assistantBubble.text = "अभी इंटरनेट कनेक्शन में समस्या है।"; speak("अभी इंटरनेट कनेक्शन में समस्या है।") } }
         })
     }
 
@@ -330,9 +356,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopListening() {
-        if (!voiceTurnInProgress && !listeningByButton) return
-        voiceTurnInProgress = false; listeningByButton = false; speechHandler.removeCallbacksAndMessages(null)
-        if (::speech.isInitialized) { try { speech.setRecognitionListener(null) } catch (_: Exception) {}; try { speech.stopListening() } catch (_: Exception) {}; try { speech.cancel() } catch (_: Exception) {}; speech.destroy() }
+        interactionGeneration++
+        voiceTurnInProgress = false
+        listeningByButton = false
+        speechHandler.removeCallbacksAndMessages(null)
+        if (::tts.isInitialized) { try { tts.stop() } catch (_: Exception) {} }
+        cancelActiveSpeechRecognizer()
         stopAnimation(); showHome()
     }
 
@@ -352,6 +381,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        interactionGeneration++
         voiceTurnInProgress = false; listeningByButton = false; speechHandler.removeCallbacksAndMessages(null); clearAnimations()
         if (::speech.isInitialized) speech.destroy(); if (::tts.isInitialized) { tts.stop(); tts.shutdown() }
         super.onDestroy()
