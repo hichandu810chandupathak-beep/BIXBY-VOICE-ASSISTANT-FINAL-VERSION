@@ -71,34 +71,35 @@ class AccessibilityCommandService : AccessibilityService() {
         return dispatchGesture(GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, 70)).build(), null, null)
     }
 
-    /** Samsung One UI exposes connectivity controls through Quick Settings to accessibility services. */
+    /** Never sends a blind BACK after touching Quick Settings: BACK can fall through to the
+     * assistant Activity and make it appear to close. One UI also needs extra time to expose
+     * the tile to Accessibility, so use delayed retries and verify the resulting state. */
     private fun setTileState(tile: String, enable: Boolean): Boolean {
         if (instance == null) return false
         performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
-        handler.postDelayed({ expandQuickPanel(); tryClickSystemTile(tile, enable, 0) }, 650L)
+        handler.postDelayed({ tryClickSystemTile(tile, enable, 0) }, 900L)
         return true
     }
-    private fun expandQuickPanel() {
-        val r = root() ?: return
-        if (findScrollable(r, AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return
-    }
+
     private fun tryClickSystemTile(tile: String, enable: Boolean, attempt: Int) {
         val node = findSystemTile(root(), tile)
         if (node != null) {
             val state = nodeState(node)
-            if (state == enable) { performGlobalAction(GLOBAL_ACTION_BACK); return }
-            // If One UI does not expose the state, the user's explicit command is still a
-            // deliberate toggle. Perform exactly one click, then close the panel.
-            if (state == null || state != enable) {
-                if (clickNode(node)) handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 500L)
-                else if (attempt < 3) handler.postDelayed({ tryClickSystemTile(tile, enable, attempt + 1) }, 300L)
-                else performGlobalAction(GLOBAL_ACTION_BACK)
+            if (state == enable) return
+            if (clickNode(node)) {
+                handler.postDelayed({ verifyTileState(tile, enable, 0) }, 900L)
                 return
             }
         }
-        if (attempt < 4) handler.postDelayed({ tryClickSystemTile(tile, enable, attempt + 1) }, 300L)
-        else performGlobalAction(GLOBAL_ACTION_BACK)
+        if (attempt < 6) handler.postDelayed({ tryClickSystemTile(tile, enable, attempt + 1) }, 350L)
     }
+
+    private fun verifyTileState(tile: String, enable: Boolean, attempt: Int) {
+        val node = findSystemTile(root(), tile)
+        if (node != null && nodeState(node) == enable) return
+        if (attempt < 2) handler.postDelayed({ verifyTileState(tile, enable, attempt + 1) }, 500L)
+    }
+
     private fun findSystemTile(node: AccessibilityNodeInfo?, tile: String): AccessibilityNodeInfo? {
         if (node == null) return null
         val labels = listOf(node.text?.toString(), node.contentDescription?.toString(), if (Build.VERSION.SDK_INT >= 30) node.stateDescription?.toString() else null).filterNotNull().joinToString(" ").lowercase()
@@ -111,6 +112,7 @@ class AccessibilityCommandService : AccessibilityService() {
         for (i in 0 until node.childCount) findSystemTile(node.getChild(i), tile)?.let { return it }
         return null
     }
+
     private fun nodeState(node: AccessibilityNodeInfo): Boolean? {
         if (node.isCheckable) return node.isChecked
         val text = listOf(node.text?.toString(), node.contentDescription?.toString(), if (Build.VERSION.SDK_INT >= 30) node.stateDescription?.toString() else null).filterNotNull().joinToString(" ").lowercase()
