@@ -85,6 +85,10 @@ class MainActivity : AppCompatActivity() {
         weatherCard = findViewById(R.id.weatherCard)
         textInputPanel = findViewById(R.id.textInputPanel)
         textInput = findViewById(R.id.textInput)
+        // Wire visible UI controls before capability/device checks.
+        // A model-string mismatch must never leave Menu/Settings dead.
+        setupUiActions()
+        startIdleAnimation()
         if (!isSupportedDevice()) { status.text = "Device not supported"; return }
         launchedByHotword = intent.getBooleanExtra("HOTWORD_TRIGGERED", false)
 
@@ -107,8 +111,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         findViewById<TextView>(R.id.cancelButton).setOnClickListener { stopListening() }
-        setupUiActions()
-        startIdleAnimation()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         } else {
