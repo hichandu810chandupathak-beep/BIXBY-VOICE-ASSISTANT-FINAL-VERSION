@@ -4,7 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_main"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +15,9 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="8dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -56,13 +60,17 @@
             android:id="@+id/contentArea"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <LinearLayout
                 android:id="@+id/homeContent"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false">
 
                 <TextView
                     android:id="@+id/greetingText"
@@ -87,12 +95,16 @@
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
-                    android:layout_weight="1">
+                    android:layout_weight="1"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
                     <FrameLayout
                         android:id="@+id/orbContainer"
-                        android:layout_width="260dp"
-                        android:layout_height="260dp"
-                        android:layout_gravity="center">
+                        android:layout_width="300dp"
+                        android:layout_height="300dp"
+                        android:layout_gravity="center"
+                        android:clipChildren="false"
+                        android:clipToPadding="false">
                         <View android:id="@+id/orb_outer" android:layout_width="260dp" android:layout_height="260dp" android:layout_gravity="center" android:background="@drawable/orb_outer" />
                         <View android:id="@+id/orb_middle" android:layout_width="226dp" android:layout_height="226dp" android:layout_gravity="center" android:background="@drawable/orb_middle" />
                         <View android:id="@+id/orb_glow" android:layout_width="202dp" android:layout_height="202dp" android:layout_gravity="center" android:background="@drawable/orb_glow" />
@@ -128,8 +140,8 @@
                 android:gravity="center_horizontal"
                 android:visibility="gone">
                 <TextView android:id="@+id/listeningTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="34dp" android:gravity="center" android:text="Listening..." android:textColor="@color/bixby_blue" android:textSize="17sp" />
-                <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
-                    <FrameLayout android:layout_width="260dp" android:layout_height="260dp" android:layout_gravity="center">
+                <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipChildren="false" android:clipToPadding="false">
+                    <FrameLayout android:layout_width="300dp" android:layout_height="300dp" android:layout_gravity="center" android:clipChildren="false" android:clipToPadding="false">
                         <View android:id="@+id/listenOuter" android:layout_width="260dp" android:layout_height="260dp" android:layout_gravity="center" android:background="@drawable/orb_outer" />
                         <View android:id="@+id/listenMiddle" android:layout_width="214dp" android:layout_height="214dp" android:layout_gravity="center" android:background="@drawable/orb_middle" />
                         <View android:id="@+id/listenGlow" android:layout_width="182dp" android:layout_height="182dp" android:layout_gravity="center" android:background="@drawable/orb_glow" />
