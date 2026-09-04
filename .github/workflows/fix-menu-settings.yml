@@ -21,16 +21,25 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path('app/src/main/java/com/bixby/voiceassistant/MainActivity.kt')
-          s = p.read_text()
-          old = '''        if (!isSupportedDevice()) {\n            status.text = "Device not supported"; return\n        }\n        launchedByHotword = intent.getBooleanExtra("HOTWORD_TRIGGERED", false)'''
-          new = '''        // Wire every visible UI control before capability/device checks.\n        // A model-string mismatch must never leave Menu/Settings dead.\n        setupUiActions()\n        startIdleAnimation()\n        if (!isSupportedDevice()) {\n            status.text = "Device not supported"; return\n        }\n        launchedByHotword = intent.getBooleanExtra("HOTWORD_TRIGGERED", false)'''
-          if old not in s:
-              print('No matching old block; leaving source unchanged.')
-          else:
-              s = s.replace(old, new, 1)
-              # Remove the later duplicate calls if they exist in the original block.
-              s = s.replace('''        setupUiActions()\n        startIdleAnimation()\n        if (ContextCompat.checkSelfPermission''', '''        if (ContextCompat.checkSelfPermission''', 1)
-              p.write_text(s)
+          lines = p.read_text().splitlines()
+          marker = '        if (!isSupportedDevice()) { status.text = "Device not supported"; return }'
+          if marker not in lines:
+              raise SystemExit('Target device-check line not found; source layout changed.')
+          i = lines.index(marker)
+          setup = [
+              '        // Wire visible UI controls before capability/device checks.',
+              '        // A model-string mismatch must never leave Menu/Settings dead.',
+              '        setupUiActions()',
+              '        startIdleAnimation()',
+          ]
+          if lines[i-4:i] != setup:
+              lines[i:i] = setup
+          # Remove the original later duplicate setup calls once, if present.
+          for j in range(i + len(setup) + 1, len(lines) - 1):
+              if lines[j] == '        setupUiActions()' and lines[j+1] == '        startIdleAnimation()':
+                  del lines[j:j+2]
+                  break
+          p.write_text('\n'.join(lines) + '\n')
           PY
 
       - name: Commit fix if changed
@@ -41,7 +50,7 @@ jobs:
             exit 0
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+users.noreply.github.com"
           git add app/src/main/java/com/bixby/voiceassistant/MainActivity.kt
           git commit -m "Fix non-responsive Menu and Settings controls"
           git push
