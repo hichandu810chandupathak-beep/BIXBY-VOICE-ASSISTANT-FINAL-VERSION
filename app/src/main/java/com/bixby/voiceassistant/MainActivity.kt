@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
             val errorView = TextView(this).apply {
                 text = "STARTUP ERROR:\n\n${t.message}\n\n${t.stackTraceToString()}"
                 setPadding(32, 48, 32, 48)
-                textSize = 14sp
+                textSize = 14f
                 setTextColor(0xFFFF4444.toInt())
                 setBackgroundColor(0xFF1E1E1E.toInt())
             }
