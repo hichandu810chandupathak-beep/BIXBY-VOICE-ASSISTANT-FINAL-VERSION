@@ -13,4 +13,7 @@
     <color name="bixby_mic_icon">#FFFFFF</color>
     <color name="bixby_blue">#126FEA</color>
     <color name="bixby_blue_bright">#27B8FF</color>
+
+    <color name="bixby_text_primary">#F4F7FB</color>
+    <color name="bixby_text_secondary">#AAB6C5</color>
 </resources>
