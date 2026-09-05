@@ -1,16 +1,19 @@
 package com.bixby.voiceassistant
 
 import android.content.Context
+import android.util.Log
 import com.bixby.voiceassistant.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 
-/** Routes local device commands before contacting Gemini over REST. */
+/** Executes local device commands first, then contacts Gemini only for AI requests. */
 class AssistantAiHandler(context: Context) {
 
     private val commandExecutor = CommandExecutor(context.applicationContext)
@@ -25,12 +28,16 @@ class AssistantAiHandler(context: Context) {
             return@withContext Result.failure(IllegalArgumentException("Empty user input"))
         }
 
+        // CRITICAL: local/offline commands always run before any network work.
         when (val local = commandExecutor.executeIfSupported(prompt)) {
-            is CommandExecutor.Result.Handled -> return@withContext Result.success(local.message)
+            is CommandExecutor.Result.Handled -> {
+                return@withContext Result.success(local.message)
+            }
             CommandExecutor.Result.NotHandled -> Unit
         }
 
         if (apiKey.isEmpty()) {
+            Log.e("BixbyAPI", "GEMINI_API_KEY is missing")
             return@withContext Result.failure(MissingGeminiApiKeyException())
         }
 
@@ -38,10 +45,10 @@ class AssistantAiHandler(context: Context) {
             val requestJson = JSONObject()
                 .put(
                     "contents",
-                    org.json.JSONArray().put(
+                    JSONArray().put(
                         JSONObject().put(
                             "parts",
-                            org.json.JSONArray().put(JSONObject().put("text", prompt))
+                            JSONArray().put(JSONObject().put("text", prompt))
                         )
                     )
                 )
@@ -49,7 +56,7 @@ class AssistantAiHandler(context: Context) {
                     "systemInstruction",
                     JSONObject().put(
                         "parts",
-                        org.json.JSONArray().put(
+                        JSONArray().put(
                             JSONObject().put(
                                 "text",
                                 "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
@@ -58,35 +65,51 @@ class AssistantAiHandler(context: Context) {
                     )
                 )
 
+            // Build the URL structurally so the API key is encoded correctly.
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+                .toHttpUrl()
+                .newBuilder()
+                .addQueryParameter("key", apiKey)
+                .build()
+
             val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
+                .url(url)
                 .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .header("Accept", "application/json")
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
+                    Log.e("BixbyAPI", "HTTP ${response.code}: $body")
                     throw IllegalStateException("HTTP ${response.code}")
                 }
 
-                val body = response.body?.string().orEmpty()
-                val text = JSONObject(body)
-                    .optJSONArray("candidates")
+                val root = JSONObject(body)
+                val text = root.optJSONArray("candidates")
                     ?.optJSONObject(0)
                     ?.optJSONObject("content")
                     ?.optJSONArray("parts")
-                    ?.optJSONObject(0)
-                    ?.optString("text")
+                    ?.let { parts ->
+                        buildString {
+                            for (i in 0 until parts.length()) {
+                                parts.optJSONObject(i)?.optString("text")?.let { append(it) }
+                            }
+                        }
+                    }
                     ?.trim()
                     .orEmpty()
 
                 if (text.isEmpty()) {
+                    Log.e("BixbyAPI", "Gemini returned no usable text: $body")
                     throw IllegalStateException("Empty Gemini response")
                 }
 
                 Result.success(text)
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            Log.e("BixbyAPI", "OkHttp/Gemini request failed", error)
+            // Never expose technical network details to the UI or TTS.
             Result.failure(GeminiConnectionException())
         }
     }
