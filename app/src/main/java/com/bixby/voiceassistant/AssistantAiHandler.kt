@@ -1,26 +1,42 @@
 package com.bixby.voiceassistant
 
+import com.google.genai.kotlin.Client
+import com.google.genai.kotlin.types.GenerateContentConfig
+
 /**
- * Small AI boundary for the current phase.
- * Replace the implementation with Gemini/network code later without changing the UI controller.
+ * Isolated Gemini boundary. The API key is supplied by BuildConfig from local.properties.
+ * No key is hardcoded in this source file.
  */
 class AssistantAiHandler {
 
-    fun generateResponse(userText: String): String {
-        val text = userText.trim()
-        if (text.isEmpty()) return "I didn't catch that. Please try again."
+    private val apiKey: String
+        get() = BuildConfig.GEMINI_API_KEY.trim()
 
-        return when {
-            text.contains("hello", ignoreCase = true) ||
-                text.contains("hi", ignoreCase = true) ||
-                text.contains("namaste", ignoreCase = true) ->
-                "Hello! How can I help you?"
+    suspend fun generateResponse(userText: String): Result<String> {
+        val prompt = userText.trim()
+        if (prompt.isEmpty()) {
+            return Result.failure(IllegalArgumentException("Empty user input"))
+        }
 
-            text.contains("time", ignoreCase = true) ->
-                "I heard your request about the time. A live time provider can be connected in the next logic phase."
+        if (apiKey.isEmpty()) {
+            return Result.failure(MissingGeminiApiKeyException())
+        }
 
-            else ->
-                "I heard: \"$text\". I'm ready for a full AI response engine."
+        return runCatching {
+            Client(apiKey = apiKey).use { client ->
+                val response = client.models.generateContent(
+                    model = "gemini-flash-latest",
+                    text = prompt,
+                    config = GenerateContentConfig(
+                        systemInstruction = "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
+                    )
+                )
+
+                response.text?.trim().takeUnless { it.isNullOrEmpty() }
+                    ?: throw IllegalStateException("Gemini returned an empty response")
+            }
         }
     }
+
+    class MissingGeminiApiKeyException : IllegalStateException("GEMINI_API_KEY is missing")
 }
