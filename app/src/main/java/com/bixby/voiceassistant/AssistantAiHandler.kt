@@ -29,9 +29,7 @@ class AssistantAiHandler(context: Context) {
                     model = "gemini-flash-latest",
                     text = Content.fromText(prompt),
                     config = GenerateContentConfig(
-                        systemInstruction = Content.fromText(
-                            "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
-                        )
+                        systemInstruction = "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
                     )
                 )
                 response.text?.trim().takeUnless { it.isNullOrEmpty() }
