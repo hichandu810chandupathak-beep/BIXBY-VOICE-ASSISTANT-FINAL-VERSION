@@ -23,7 +23,7 @@ class AssistantAiHandler(context: Context) {
 
         if (apiKey.isEmpty()) return Result.failure(MissingGeminiApiKeyException())
 
-        return runCatching {
+        return try {
             Client(apiKey = apiKey).use { client ->
                 val response = client.models.generateContent(
                     model = "gemini-flash-latest",
@@ -37,8 +37,11 @@ class AssistantAiHandler(context: Context) {
                 response.text?.trim().takeUnless { it.isNullOrEmpty() }
                     ?: throw IllegalStateException("Gemini returned an empty response")
             }
+        } catch (error: Throwable) {
+            val detail = error.message?.trim().takeUnless { it.isNullOrEmpty() } ?: error.javaClass.name
+            Result.failure(IllegalStateException("Gemini request failed: $detail", error))
         }
     }
 
-    class MissingGeminiApiKeyException : IllegalStateException("GEMINI_API_KEY is missing")
+    class MissingGeminiApiKeyException : IllegalStateException("GEMINI_API_KEY is missing from BuildConfig")
 }

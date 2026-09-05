@@ -1,6 +1,7 @@
 package com.bixby.voiceassistant
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -11,8 +12,12 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.view.KeyEvent
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -30,13 +35,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private companion object {
         const val REQUEST_PERMISSIONS = 1001
         const val TYPING_DELAY_MS = 24L
-        const val NETWORK_ERROR_MESSAGE = "I am having trouble connecting to the network."
     }
 
     private lateinit var floatingBar: LinearLayout
     private lateinit var responseSheet: LinearLayout
     private lateinit var status: TextView
     private lateinit var responseContent: TextView
+    private lateinit var commandInput: EditText
     private lateinit var orbGlow: ImageView
 
     private var speechRecognizer: SpeechRecognizer? = null
@@ -54,13 +59,52 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         responseSheet = findViewById(R.id.responseSheet)
         status = findViewById(R.id.tvAssistantStatus)
         responseContent = findViewById(R.id.tvResponseContent)
+        commandInput = findViewById(R.id.etCommandInput)
         orbGlow = findViewById(R.id.orbGlow)
         startOrbPulse()
         textToSpeech = TextToSpeech(this, this)
         setupSpeechRecognizer()
-        findViewById<View>(R.id.btnKeyboard).setOnClickListener { stopListening(); status.text = "Type a command" }
+
+        findViewById<View>(R.id.btnKeyboard).setOnClickListener { toggleKeyboardInput() }
+        commandInput.setOnEditorActionListener { _, actionId, event ->
+            val submit = actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE ||
+                (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            if (submit) {
+                val text = commandInput.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    hideKeyboardInput()
+                    status.text = "Thinking..."
+                    handleRecognizedText(text)
+                }
+                true
+            } else false
+        }
         findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }
         floatingBar.setOnClickListener { toggleResponseSheet() }
+    }
+
+    private fun toggleKeyboardInput() {
+        stopListening()
+        if (commandInput.visibility == View.VISIBLE) {
+            hideKeyboardInput()
+            return
+        }
+        status.visibility = View.GONE
+        commandInput.visibility = View.VISIBLE
+        commandInput.requestFocus()
+        commandInput.post {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(commandInput, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
+    private fun hideKeyboardInput() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(commandInput.windowToken, 0)
+        commandInput.clearFocus()
+        commandInput.visibility = View.GONE
+        status.visibility = View.VISIBLE
+        status.text = "Listening..."
     }
 
     private fun setupSpeechRecognizer() {
@@ -100,12 +144,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.CAMERA)
             if (android.os.Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.BLUETOOTH_CONNECT)
         }
-        if (needed.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)
-        } else startListening()
+        if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS) else startListening()
     }
 
     private fun startListening() {
+        hideKeyboardInput()
         val recognizer = speechRecognizer ?: return
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -134,10 +177,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     showResponseWithTyping(response)
                     speakResponse(response)
                 },
-                onFailure = {
-                    status.text = "Connection problem"
-                    showResponseWithTyping(NETWORK_ERROR_MESSAGE)
-                    speakResponse(NETWORK_ERROR_MESSAGE)
+                onFailure = { error ->
+                    val detail = error.message?.trim().takeUnless { it.isNullOrEmpty() } ?: error.javaClass.simpleName
+                    val message = "Gemini API error: $detail"
+                    status.text = message
+                    showResponseWithTyping(message)
+                    speakResponse(message)
                 }
             )
         }

@@ -104,6 +104,24 @@
             android:textColor="@color/bixby_text_primary"
             android:textSize="16sp" />
 
+        <EditText
+            android:id="@+id/etCommandInput"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bixby_text_input_bg"
+            android:hint="Type a command"
+            android:imeOptions="actionSend"
+            android:inputType="textCapSentences"
+            android:maxLines="1"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textColor="@color/bixby_text_primary"
+            android:textColorHint="@color/bixby_secondary_text"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
         <ImageButton
             android:id="@+id/btnKeyboard"
             android:layout_width="44dp"
