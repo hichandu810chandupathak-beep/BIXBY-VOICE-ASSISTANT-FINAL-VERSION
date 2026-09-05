@@ -14,17 +14,23 @@ class AssistantAiHandler(context: Context) {
 
     suspend fun generateResponse(userText: String): Result<String> {
         val prompt = userText.trim()
-        if (prompt.isEmpty()) return Result.failure(IllegalArgumentException("Empty user input"))
+        if (prompt.isEmpty()) {
+            return Result.failure(IllegalArgumentException("Empty user input"))
+        }
 
         when (val local = commandExecutor.executeIfSupported(prompt)) {
-            is CommandExecutor.Result.Handled -> return Result.success(local.message)
+            is CommandExecutor.Result.Handled -> {
+                return Result.success(local.message)
+            }
             CommandExecutor.Result.NotHandled -> Unit
         }
 
-        if (apiKey.isEmpty()) return Result.failure(MissingGeminiApiKeyException())
+        if (apiKey.isEmpty()) {
+            return Result.failure(MissingGeminiApiKeyException())
+        }
 
         return try {
-            Client(apiKey = apiKey).use { client ->
+            val text: String = Client(apiKey = apiKey).use { client ->
                 val response = client.models.generateContent(
                     model = "gemini-flash-latest",
                     text = prompt,
@@ -37,8 +43,10 @@ class AssistantAiHandler(context: Context) {
                 response.text?.trim().takeUnless { it.isNullOrEmpty() }
                     ?: throw IllegalStateException("Gemini returned an empty response")
             }
-        } catch (error: Throwable) {
-            val detail = error.message?.trim().takeUnless { it.isNullOrEmpty() } ?: error.javaClass.name
+            Result.success(text)
+        } catch (error: Exception) {
+            val detail = error.message?.trim().takeUnless { it.isNullOrEmpty() }
+                ?: error.javaClass.name
             Result.failure(IllegalStateException("Gemini request failed: $detail", error))
         }
     }
