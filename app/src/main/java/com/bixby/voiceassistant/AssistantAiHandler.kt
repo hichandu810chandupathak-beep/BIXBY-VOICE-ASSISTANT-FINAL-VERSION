@@ -2,6 +2,7 @@ package com.bixby.voiceassistant
 
 import android.content.Context
 import com.google.genai.kotlin.Client
+import com.google.genai.kotlin.types.Content
 import com.google.genai.kotlin.types.GenerateContentConfig
 
 /** Routes local device commands before contacting Gemini. */
@@ -26,9 +27,11 @@ class AssistantAiHandler(context: Context) {
             Client(apiKey = apiKey).use { client ->
                 val response = client.models.generateContent(
                     model = "gemini-flash-latest",
-                    text = prompt,
+                    text = Content.fromText(prompt),
                     config = GenerateContentConfig(
-                        systemInstruction = "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
+                        systemInstruction = Content.fromText(
+                            "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
+                        )
                     )
                 )
                 response.text?.trim().takeUnless { it.isNullOrEmpty() }
