@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Executes local device commands first, then contacts Gemini only for AI requests. */
@@ -28,9 +29,7 @@ class AssistantAiHandler(context: Context) {
 
         // CRITICAL: local/offline commands always run before any network work.
         when (val local = commandExecutor.executeIfSupported(prompt)) {
-            is CommandExecutor.Result.Handled -> {
-                return@withContext Result.success(local.message)
-            }
+            is CommandExecutor.Result.Handled -> return@withContext Result.success(local.message)
             CommandExecutor.Result.NotHandled -> Unit
         }
 
@@ -40,11 +39,30 @@ class AssistantAiHandler(context: Context) {
         }
 
         try {
-            // Gemini generateContent payload: contents -> parts -> text.
-            // JSONObject.quote keeps quotes/newlines in user input valid JSON.
-            val safeUserText = JSONObject.quote(prompt)
-            val jsonBody = """{"contents": [{"parts": [{"text": $safeUserText}]}]}"""
+            val requestJson = JSONObject()
+                .put(
+                    "systemInstruction",
+                    JSONObject().put(
+                        "parts",
+                        JSONArray().put(
+                            JSONObject().put(
+                                "text",
+                                "You are Bixby, a highly conversational, human-like voice assistant. You MUST reply in the exact language the user speaks (Hindi, Hinglish, or English). Be concise, natural, friendly, and do not sound like a robot."
+                            )
+                        )
+                    )
+                )
+                .put(
+                    "contents",
+                    JSONArray().put(
+                        JSONObject().put(
+                            "parts",
+                            JSONArray().put(JSONObject().put("text", prompt))
+                        )
+                    )
+                )
 
+            val jsonBody = requestJson.toString()
             val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}"
 
             val request = Request.Builder()
@@ -56,7 +74,6 @@ class AssistantAiHandler(context: Context) {
             httpClient.newCall(request).execute().use { response ->
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
-                    // Log the complete Google response so the exact rejection is visible in Logcat.
                     Log.e("BixbyAPI", "HTTP ${response.code}: $body")
                     throw IllegalStateException("HTTP ${response.code}")
                 }
@@ -90,6 +107,5 @@ class AssistantAiHandler(context: Context) {
     }
 
     class MissingGeminiApiKeyException : IllegalStateException("Gemini API key is missing")
-
     class GeminiConnectionException : IllegalStateException("I am sorry, I am having trouble connecting right now.")
 }

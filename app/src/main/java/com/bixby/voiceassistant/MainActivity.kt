@@ -4,9 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -46,8 +46,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var textToSpeech: TextToSpeech? = null
     private var isListening = false
     private var pendingResponse: String? = null
+    private var pendingTtsLocale: Locale = Locale("hi", "IN")
     private var typingRunnable: Runnable? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val aiHandler by lazy { AssistantAiHandler(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,12 +61,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         commandInput = findViewById(R.id.etCommandInput)
         orbGlow = findViewById(R.id.orbGlow)
 
-        // No global RenderEffect/blur: every text, icon, and surface stays crisp.
+        // No global RenderEffect/blur: existing UI remains crisp and unchanged.
         startOrbPulse()
         textToSpeech = TextToSpeech(this, this)
         setupSpeechRecognizer()
 
         findViewById<View>(R.id.btnKeyboard).setOnClickListener { toggleKeyboardInput() }
+        findViewById<View>(R.id.btnSettings).setOnClickListener { openAppSettings() }
         commandInput.setOnEditorActionListener { _, actionId, event ->
             val submit = actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE ||
                 (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
@@ -83,6 +85,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (isListening) stopListening() else requestPermissionsAndListen()
         }
         floatingBar.setOnClickListener { toggleResponseSheet() }
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        startActivity(intent)
     }
 
     private fun toggleKeyboardInput() {
@@ -122,8 +131,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
                 override fun onEndOfSpeech() { isListening = false; status.text = "Thinking..." }
                 override fun onPartialResults(partialResults: Bundle?) {
-                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()?.let { status.text = it }
+                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { status.text = it }
                 }
                 override fun onResults(results: Bundle?) {
                     isListening = false
@@ -175,25 +183,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun handleRecognizedText(userText: String) {
         lifecycleScope.launch {
-            // AssistantAiHandler executes the local/offline interceptor first. Only
-            // genuinely non-local requests reach OkHttp/Gemini.
             val result = aiHandler.generateResponse(userText)
             if (isFinishing || isDestroyed) return@launch
             result.fold(
                 onSuccess = { response ->
                     status.text = "Answering..."
                     showResponseWithTyping(response)
-                    speakResponse(response)
+                    speakResponse(response, userText)
                 },
                 onFailure = { error ->
-                    val message = if (error is AssistantAiHandler.MissingGeminiApiKeyException) {
-                        "I am sorry, I cannot connect right now."
-                    } else {
-                        "I am sorry, I am having trouble connecting right now."
-                    }
+                    val message = if (error is AssistantAiHandler.MissingGeminiApiKeyException) "I am sorry, I cannot connect right now." else "I am sorry, I am having trouble connecting right now."
                     status.text = message
                     showResponseWithTyping(message)
-                    speakResponse(message)
+                    speakResponse(message, userText)
                 }
             )
         }
@@ -220,11 +222,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         mainHandler.post(typeNext)
     }
 
-    private fun speakResponse(response: String) {
-        val tts = textToSpeech ?: run { pendingResponse = response; return }
+    private fun speakResponse(response: String, userText: String = "") {
+        val tts = textToSpeech ?: run {
+            pendingResponse = response
+            pendingTtsLocale = chooseTtsLocale(userText)
+            return
+        }
+        val locale = chooseTtsLocale(userText)
+        pendingTtsLocale = locale
+        tts.language = locale
         if (tts.isSpeaking) tts.stop()
         startOrbPulse()
         tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, "bixby_response")
+    }
+
+    private fun chooseTtsLocale(userText: String): Locale {
+        val hasDevanagari = userText.any { it in '\u0900'..'\u097F' }
+        val lower = userText.lowercase()
+        val likelyHindi = hasDevanagari || listOf("kya", "kaise", "hai", "haan", "nahi", "nahin", "mujhe", "mera", "meri", "aap", "tum", "kar", "karo", "chahiye", "batao", "dikhao", "kholo", "band", "chalu", "chaloo").count { lower.contains(it) } >= 1
+        return if (likelyHindi) Locale("hi", "IN") else Locale("en", "US")
     }
 
     private fun startOrbPulse() {
@@ -250,13 +266,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(statusCode: Int) {
-        if (statusCode == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
+        if (statusCode == TextToSpeech.SUCCESS) {
+            // Required Hindi/India initialization; individual responses can switch to en-US.
+            textToSpeech?.language = Locale("hi", "IN")
+        }
         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = runOnUiThread { startOrbPulse() }
             override fun onDone(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
             override fun onError(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
         })
-        pendingResponse?.let { pendingResponse = null; speakResponse(it) }
+        pendingResponse?.let {
+            pendingResponse = null
+            textToSpeech?.language = pendingTtsLocale
+            val pending = it
+            textToSpeech?.speak(pending, TextToSpeech.QUEUE_FLUSH, null, "bixby_response")
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
