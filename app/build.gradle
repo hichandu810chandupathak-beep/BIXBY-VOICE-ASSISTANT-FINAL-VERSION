@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+import java.util.Properties
+
 android {
     namespace 'com.bixby.voiceassistant'
     compileSdk 36
@@ -14,6 +16,20 @@ android {
         versionCode 5
         versionName "1.0.3"
     }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    def localProperties = new Properties()
+    def localPropertiesFile = rootProject.file('local.properties')
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.withInputStream { localProperties.load(it) }
+    }
+    def geminiApiKey = localProperties.getProperty('GEMINI_API_KEY', '')
+        .replace('\\', '\\\\')
+        .replace('"', '\\"')
+    buildConfigField 'String', 'GEMINI_API_KEY', '"' + geminiApiKey + '"'
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
@@ -27,4 +43,7 @@ kotlin {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation 'com.google.genai:google-genai-kotlin:1.0.0'
 }
