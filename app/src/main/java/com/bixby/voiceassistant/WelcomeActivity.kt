@@ -1,9 +1,7 @@
 package com.bixby.voiceassistant
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
@@ -11,21 +9,16 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AppCompatActivity
 
-class WelcomeActivity : Activity() {
+class WelcomeActivity : AppCompatActivity() {
     private companion object { const val EXTRA_START_VOICE = "start_voice_after_welcome" }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { result ->
-        val micGranted = result[Manifest.permission.RECORD_AUDIO] == true ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        val notificationGranted = Build.VERSION.SDK_INT < 33 ||
-            result[Manifest.permission.POST_NOTIFICATIONS] == true ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-
-        if (micGranted && notificationGranted) {
+    ) { permissions: Map<String, Boolean> ->
+        val allGranted = permissions.values.all { it == true }
+        if (allGranted) {
             getSharedPreferences("bixby_onboarding", MODE_PRIVATE)
                 .edit().putBoolean("completed", true).apply()
             HotwordListeningService.start(this)
