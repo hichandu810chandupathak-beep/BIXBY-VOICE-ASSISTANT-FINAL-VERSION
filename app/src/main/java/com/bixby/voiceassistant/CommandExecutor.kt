@@ -29,6 +29,7 @@ class CommandExecutor(private val context: Context) {
                 openSettings(Settings.ACTION_WIFI_SETTINGS)
                 Result.Handled("Opening Wi-Fi settings.")
             }
+            isAppLaunchCommand(text) -> Result.Handled(launchApp(text))
             else -> Result.NotHandled
         }
     }
@@ -43,7 +44,11 @@ class CommandExecutor(private val context: Context) {
 
     private fun isWifiSettingsCommand(text: String): Boolean =
         (text.contains("wifi") || text.contains("wi-fi")) &&
-            (text.contains("settings") || text.contains("open") || text.contains("show"))
+            (text.contains("settings") || text.contains("open") || text.contains("show") || text.contains("turn on") || text.contains("turn off"))
+
+    private fun isAppLaunchCommand(text: String): Boolean =
+        (text.startsWith("open ") || text.startsWith("launch ") || text.startsWith("start ")) &&
+            !text.contains("settings") && !text.contains("wifi") && !text.contains("wi-fi")
 
     private fun desiredFlashlightState(text: String): Boolean = when {
         text.contains("turn off") -> false
@@ -103,6 +108,41 @@ class CommandExecutor(private val context: Context) {
         } catch (_: SecurityException) {
             openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
             "Opening Bluetooth settings. Android may require you to confirm the change."
+        }
+    }
+
+    private fun launchApp(text: String): String {
+        val requested = text
+            .removePrefix("open ")
+            .removePrefix("launch ")
+            .removePrefix("start ")
+            .removePrefix("the ")
+            .trim()
+
+        if (requested.isEmpty()) return "Please tell me which app to open."
+
+        val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val matches = context.packageManager.queryIntentActivities(launchIntent, PackageManager.MATCH_ALL)
+        val match = matches.firstOrNull { info ->
+            info.activityInfo.packageName != context.packageName &&
+                info.loadLabel(context.packageManager).toString().trim().lowercase() == requested
+        } ?: matches.firstOrNull { info ->
+            info.activityInfo.packageName != context.packageName &&
+                info.loadLabel(context.packageManager).toString().trim().lowercase().contains(requested)
+        }
+
+        val intent = match?.activityInfo?.let { activity ->
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(
+                activity.packageName,
+                activity.name
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return if (intent != null) {
+            context.startActivity(intent)
+            "Opening ${match.loadLabel(context.packageManager)}."
+        } else {
+            "I couldn't find that app."
         }
     }
 
