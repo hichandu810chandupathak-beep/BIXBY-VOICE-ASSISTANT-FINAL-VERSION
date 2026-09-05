@@ -10,7 +10,7 @@ import android.hardware.camera2.CameraManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 
-/** Handles safe, local device commands before Gemini is contacted. */
+/** Handles local device commands before Gemini/OkHttp. */
 class CommandExecutor(private val context: Context) {
 
     sealed class Result {
@@ -18,42 +18,47 @@ class CommandExecutor(private val context: Context) {
         data object NotHandled : Result()
     }
 
+    /**
+     * Strict offline-first interceptor. Every handled command returns immediately;
+     * AssistantAiHandler must not continue into the network path after Handled.
+     */
     fun executeIfSupported(rawText: String): Result {
-        val text = rawText.trim().lowercase()
-        if (text.isEmpty()) return Result.NotHandled
+        val command = rawText.trim().lowercase()
+        if (command.isEmpty()) return Result.NotHandled
 
-        return when {
-            isFlashlightCommand(text) -> Result.Handled(setFlashlight(desiredFlashlightState(text)))
-            isBluetoothCommand(text) -> Result.Handled(handleBluetooth(text))
-            isWifiSettingsCommand(text) -> {
-                openSettings(Settings.ACTION_WIFI_SETTINGS)
-                Result.Handled("Opening Wi-Fi settings.")
+        // HARD STOP: flashlight/torch is always local and never reaches OkHttp.
+        if (command.contains("torch") || command.contains("flashlight")) {
+            val enabled = when {
+                command.contains("turn off") || command.contains("switch off") -> false
+                command.contains("turn on") || command.contains("switch on") -> true
+                else -> !torchState
             }
-            isAppLaunchCommand(text) -> Result.Handled(launchApp(text))
-            else -> Result.NotHandled
+            return Result.Handled(setFlashlight(enabled))
         }
-    }
 
-    private fun isFlashlightCommand(text: String): Boolean =
-        (text.contains("flashlight") || text.contains("torch")) &&
-            (text.contains("turn on") || text.contains("turn off") || text.contains("switch") || text.contains("toggle"))
+        // HARD STOP: Bluetooth is always local/settings and never reaches OkHttp.
+        if (command.contains("bluetooth")) {
+            return Result.Handled(handleBluetooth(command))
+        }
 
-    private fun isBluetoothCommand(text: String): Boolean =
-        text.contains("bluetooth") &&
-            (text.contains("turn on") || text.contains("turn off") || text.contains("switch") || text.contains("toggle"))
+        // HARD STOP: Wi-Fi requests are local settings navigation and never reach OkHttp.
+        if (command.contains("wifi") || command.contains("wi-fi")) {
+            if (command.contains("settings") || command.contains("open") || command.contains("show") ||
+                command.contains("turn on") || command.contains("turn off") ||
+                command.contains("switch on") || command.contains("switch off")) {
+                openSettings(Settings.ACTION_WIFI_SETTINGS)
+                return Result.Handled("Opening Wi-Fi settings.")
+            }
+        }
 
-    private fun isWifiSettingsCommand(text: String): Boolean =
-        (text.contains("wifi") || text.contains("wi-fi")) &&
-            (text.contains("settings") || text.contains("open") || text.contains("show") || text.contains("turn on") || text.contains("turn off"))
+        // HARD STOP: explicit app launches are local and never reach OkHttp.
+        if (command.startsWith("open ") || command.startsWith("launch ") || command.startsWith("start ")) {
+            if (!command.contains("settings") && !command.contains("wifi") && !command.contains("wi-fi")) {
+                return Result.Handled(launchApp(command))
+            }
+        }
 
-    private fun isAppLaunchCommand(text: String): Boolean =
-        (text.startsWith("open ") || text.startsWith("launch ") || text.startsWith("start ")) &&
-            !text.contains("settings") && !text.contains("wifi") && !text.contains("wi-fi")
-
-    private fun desiredFlashlightState(text: String): Boolean = when {
-        text.contains("turn off") -> false
-        text.contains("turn on") -> true
-        else -> !torchState
+        return Result.NotHandled
     }
 
     private fun setFlashlight(enabled: Boolean): String {
@@ -76,12 +81,11 @@ class CommandExecutor(private val context: Context) {
         }
     }
 
-    private fun handleBluetooth(text: String): String {
+    private fun handleBluetooth(command: String): String {
         val adapter = BluetoothAdapter.getDefaultAdapter()
             ?: return "Bluetooth is not available on this phone."
-
-        val wantsOn = text.contains("turn on")
-        val wantsOff = text.contains("turn off")
+        val wantsOn = command.contains("turn on") || command.contains("switch on")
+        val wantsOff = command.contains("turn off") || command.contains("switch off")
 
         return try {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
@@ -89,15 +93,13 @@ class CommandExecutor(private val context: Context) {
                 "Opening Bluetooth settings. Android may require you to confirm the change."
             } else if (wantsOn) {
                 @Suppress("DEPRECATION")
-                val changed = adapter.enable()
-                if (changed) "Bluetooth turned on." else {
+                if (adapter.enable()) "Bluetooth turned on." else {
                     openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
                     "Opening Bluetooth settings."
                 }
             } else if (wantsOff) {
                 @Suppress("DEPRECATION")
-                val changed = adapter.disable()
-                if (changed) "Bluetooth turned off." else {
+                if (adapter.disable()) "Bluetooth turned off." else {
                     openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
                     "Opening Bluetooth settings."
                 }
@@ -111,14 +113,13 @@ class CommandExecutor(private val context: Context) {
         }
     }
 
-    private fun launchApp(text: String): String {
-        val requested = text
+    private fun launchApp(command: String): String {
+        val requested = command
             .removePrefix("open ")
             .removePrefix("launch ")
             .removePrefix("start ")
             .removePrefix("the ")
             .trim()
-
         if (requested.isEmpty()) return "Please tell me which app to open."
 
         val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
