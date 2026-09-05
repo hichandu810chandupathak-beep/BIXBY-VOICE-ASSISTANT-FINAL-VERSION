@@ -5,7 +5,6 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- Base response surface: hidden until the UI controller opens it. -->
     <LinearLayout
         android:id="@+id/responseSheet"
         android:layout_width="match_parent"
@@ -34,7 +33,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
             android:text="Bixby"
-            android:textColor="@color/bixby_text_primary"
+            android:textColor="@color/bixby_primary_text"
             android:textSize="20sp" />
 
         <TextView
@@ -43,11 +42,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Your response will appear here."
-            android:textColor="@color/bixby_text_secondary"
+            android:textColor="@color/bixby_secondary_text"
             android:textSize="15sp" />
     </LinearLayout>
 
-    <!-- Floating listening / thinking bar. -->
     <LinearLayout
         android:id="@+id/floatingBar"
         android:layout_width="match_parent"
