@@ -10,6 +10,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
@@ -18,6 +19,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
@@ -25,6 +30,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private companion object {
         const val REQUEST_RECORD_AUDIO = 1001
         const val TYPING_DELAY_MS = 24L
+        const val NETWORK_ERROR_MESSAGE = "I am having trouble connecting to the network."
     }
 
     private lateinit var floatingBar: LinearLayout
@@ -37,6 +43,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var textToSpeech: TextToSpeech? = null
     private var isListening = false
     private var pendingResponse: String? = null
+    private var typingRunnable: Runnable? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val aiHandler = AssistantAiHandler()
 
@@ -63,10 +70,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (isListening) stopListening() else requestMicrophoneAndListen()
         }
 
-        // Keep the existing visual interaction; no layout changes are made in this phase.
-        floatingBar.setOnClickListener { view ->
-            if (view.id == R.id.floatingBar) toggleResponseSheet()
-        }
+        floatingBar.setOnClickListener { toggleResponseSheet() }
     }
 
     private fun setupSpeechRecognizer() {
@@ -95,14 +99,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
-                    val text = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val text = partialResults
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                     if (!text.isNullOrBlank()) status.text = text
                 }
 
                 override fun onResults(results: Bundle?) {
                     isListening = false
-                    val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val text = results
+                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         ?.firstOrNull()
                     if (text.isNullOrBlank()) {
                         status.text = "I didn't catch that"
@@ -114,12 +120,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
                 override fun onError(error: Int) {
                     isListening = false
-                    if (error == SpeechRecognizer.ERROR_NO_MATCH ||
+                    status.text = if (
+                        error == SpeechRecognizer.ERROR_NO_MATCH ||
                         error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
                     ) {
-                        status.text = "Didn't catch that"
+                        "Didn't catch that"
                     } else {
-                        status.text = "Try again"
+                        "Try again"
                     }
                 }
 
@@ -163,37 +170,65 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun handleRecognizedText(userText: String) {
-        mainHandler.post {
-            val response = aiHandler.generateResponse(userText)
-            pendingResponse = response
-            showResponseWithTyping(response)
-            speakResponse(response)
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                aiHandler.generateResponse(userText)
+            }
+
+            if (isFinishing || isDestroyed) return@launch
+
+            result.fold(
+                onSuccess = { response ->
+                    status.text = "Answering..."
+                    showResponseWithTyping(response)
+                    speakResponse(response)
+                },
+                onFailure = { error ->
+                    status.text = "Connection problem"
+                    showResponseWithTyping(NETWORK_ERROR_MESSAGE)
+                    speakResponse(NETWORK_ERROR_MESSAGE)
+                }
+            )
         }
     }
 
     private fun showResponseWithTyping(response: String) {
-        responseSheet.animate()
-            .translationY(0f)
-            .alpha(1f)
-            .setDuration(280L)
-            .start()
+        typingRunnable?.let(mainHandler::removeCallbacks)
         responseSheet.visibility = View.VISIBLE
+        responseSheet.alpha = 1f
+        responseSheet.post {
+            responseSheet.translationY = responseSheet.height.toFloat()
+            responseSheet.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setDuration(280L)
+                .start()
+        }
         responseContent.text = ""
 
         var index = 0
         val typeNext = object : Runnable {
             override fun run() {
-                if (index >= response.length) return
+                if (index >= response.length) {
+                    typingRunnable = null
+                    return
+                }
                 responseContent.append(response[index].toString())
                 index++
                 mainHandler.postDelayed(this, TYPING_DELAY_MS)
             }
         }
+        typingRunnable = typeNext
         mainHandler.post(typeNext)
     }
 
     private fun speakResponse(response: String) {
-        val tts = textToSpeech ?: return
+        val tts = textToSpeech
+        if (tts == null) {
+            pendingResponse = response
+            return
+        }
+
         if (tts.isSpeaking) tts.stop()
         startOrbPulse()
         tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, "bixby_response")
@@ -224,7 +259,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             responseSheet.translationY = responseSheet.height.toFloat()
             responseSheet.alpha = 0f
             responseSheet.visibility = View.VISIBLE
-            responseSheet.animate().translationY(0f).alpha(1f).setDuration(280L).start()
+            responseSheet.animate()
+                .translationY(0f)
+                .alpha(1f)
+                .setDuration(280L)
+                .start()
         }
     }
 
@@ -232,11 +271,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (statusCode == TextToSpeech.SUCCESS) {
             textToSpeech?.language = Locale.getDefault()
         }
-        textToSpeech?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+
+        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = runOnUiThread { startOrbPulse() }
             override fun onDone(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
             override fun onError(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
         })
+
         pendingResponse?.let {
             pendingResponse = null
             speakResponse(it)
@@ -259,6 +300,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+        typingRunnable?.let(mainHandler::removeCallbacks)
         speechRecognizer?.destroy()
         speechRecognizer = null
         textToSpeech?.stop()
