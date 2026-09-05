@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -30,64 +29,16 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private companion object { const val REQUEST_PERMISSIONS = 1001; const val TYPING_DELAY_MS = 24L }
-    private lateinit var responseSheet: LinearLayout
-    private lateinit var status: TextView
-    private lateinit var responseContent: TextView
-    private lateinit var commandInput: EditText
-    private lateinit var orbGlow: ImageView
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var textToSpeech: TextToSpeech? = null
-    private var isListening = false
-    private var pendingResponse: String? = null
-    private var pendingTtsLocale: Locale = Locale("hi", "IN")
-    private var typingRunnable: Runnable? = null
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val aiHandler by lazy { AssistantAiHandler(applicationContext) }
+    private lateinit var responseSheet: LinearLayout; private lateinit var status: TextView; private lateinit var responseContent: TextView; private lateinit var commandInput: EditText; private lateinit var orbGlow: ImageView
+    private var speechRecognizer: SpeechRecognizer? = null; private var textToSpeech: TextToSpeech? = null; private var isListening = false; private var pendingResponse: String? = null; private var pendingTtsLocale: Locale = Locale("hi", "IN"); private var typingRunnable: Runnable? = null
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper()); private val aiHandler by lazy { AssistantAiHandler(applicationContext) }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        responseSheet = findViewById(R.id.responseSheet); status = findViewById(R.id.tvAssistantStatus)
-        responseContent = findViewById(R.id.tvResponseContent); commandInput = findViewById(R.id.etCommandInput); orbGlow = findViewById(R.id.orbGlow)
-        startOrbPulse(); textToSpeech = TextToSpeech(this, this); setupSpeechRecognizer()
-        findViewById<View>(R.id.btnKeyboard).setOnClickListener { toggleKeyboardInput() }
-        findViewById<View>(R.id.btnSettings).setOnClickListener { openAppSettings() }
-        commandInput.setOnEditorActionListener { _, actionId, event ->
-            val submit = actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
-            if (submit) { val text = commandInput.text.toString().trim(); if (text.isNotEmpty()) { hideKeyboardInput(); status.text = "Thinking..."; handleRecognizedText(text) }; true } else false
-        }
-        findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }
-        findViewById<View>(R.id.floatingBar).setOnClickListener { toggleResponseSheet() }
-        requestAssistantPermissionsIfNeeded()
-    }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContentView(R.layout.activity_main); responseSheet = findViewById(R.id.responseSheet); status = findViewById(R.id.tvAssistantStatus); responseContent = findViewById(R.id.tvResponseContent); commandInput = findViewById(R.id.etCommandInput); orbGlow = findViewById(R.id.orbGlow); startOrbPulse(); textToSpeech = TextToSpeech(this, this); setupSpeechRecognizer(); findViewById<View>(R.id.btnKeyboard).setOnClickListener { toggleKeyboardInput() }; findViewById<View>(R.id.btnSettings).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }; commandInput.setOnEditorActionListener { _, actionId, event -> val submit = actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN); if (submit) { val text = commandInput.text.toString().trim(); if (text.isNotEmpty()) { hideKeyboardInput(); status.text = "Thinking..."; handleRecognizedText(text) }; true } else false }; findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }; findViewById<View>(R.id.floatingBar).setOnClickListener { toggleResponseSheet() }; requestAssistantPermissionsIfNeeded() }
 
-    private fun openAppSettings() { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply { data = Uri.parse("package:$packageName") }) }
-
-    private fun requestAssistantPermissionsIfNeeded() {
-        val needed = buildList {
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.RECORD_AUDIO)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.CAMERA)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.CALL_PHONE)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.READ_CONTACTS)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.READ_SMS)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.SEND_SMS)
-            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.READ_CALENDAR)
-            if (android.os.Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-        if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)
-    }
-
+    private fun requestAssistantPermissionsIfNeeded() { val needed = buildList { val candidates = arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.READ_CALENDAR); for (p in candidates) if (ContextCompat.checkSelfPermission(this@MainActivity, p) != PackageManager.PERMISSION_GRANTED) add(p); if (android.os.Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.BLUETOOTH_CONNECT) }; if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS) }
     private fun toggleKeyboardInput() { stopListening(); if (commandInput.visibility == View.VISIBLE) { hideKeyboardInput(); return }; status.visibility = View.GONE; commandInput.visibility = View.VISIBLE; commandInput.requestFocus(); commandInput.post { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(commandInput, InputMethodManager.SHOW_IMPLICIT) } }
     private fun hideKeyboardInput() { (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(commandInput.windowToken, 0); commandInput.clearFocus(); commandInput.visibility = View.GONE; status.visibility = View.VISIBLE; status.text = "Listening..." }
-    private fun setupSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) { status.text = "Speech recognition unavailable"; return }
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply { setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { isListening = true; status.text = "Listening..." }; override fun onBeginningOfSpeech() { status.text = "Listening..." }; override fun onRmsChanged(rmsdB: Float) = Unit; override fun onBufferReceived(buffer: ByteArray?) = Unit; override fun onEndOfSpeech() { isListening = false; status.text = "Thinking..." }
-            override fun onPartialResults(partialResults: Bundle?) { partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { status.text = it } }
-            override fun onResults(results: Bundle?) { isListening = false; val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull(); if (text.isNullOrBlank()) { status.text = "I didn't catch that"; return }; status.text = "Thinking..."; handleRecognizedText(text) }
-            override fun onError(error: Int) { isListening = false; status.text = if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) "Didn't catch that" else "Try again" }; override fun onEvent(eventType: Int, params: Bundle?) = Unit
-        }) }
-    }
+    private fun setupSpeechRecognizer() { if (!SpeechRecognizer.isRecognitionAvailable(this)) { status.text = "Speech recognition unavailable"; return }; speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply { setRecognitionListener(object : RecognitionListener { override fun onReadyForSpeech(params: Bundle?) { isListening = true; status.text = "Listening..." }; override fun onBeginningOfSpeech() { status.text = "Listening..." }; override fun onRmsChanged(rmsdB: Float) = Unit; override fun onBufferReceived(buffer: ByteArray?) = Unit; override fun onEndOfSpeech() { isListening = false; status.text = "Thinking..." }; override fun onPartialResults(partialResults: Bundle?) { partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { status.text = it } }; override fun onResults(results: Bundle?) { isListening = false; val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull(); if (text.isNullOrBlank()) { status.text = "I didn't catch that"; return }; status.text = "Thinking..."; handleRecognizedText(text) }; override fun onError(error: Int) { isListening = false; status.text = if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) "Didn't catch that" else "Try again" }; override fun onEvent(eventType: Int, params: Bundle?) = Unit }) } }
     private fun requestPermissionsAndListen() { val needed = buildList { if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.RECORD_AUDIO); if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.CAMERA); if (android.os.Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.BLUETOOTH_CONNECT) }; if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS) else startListening() }
     private fun startListening() { hideKeyboardInput(); val recognizer = speechRecognizer ?: return; val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault()); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true); putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1) }; status.text = "Listening..."; isListening = true; runCatching { recognizer.startListening(intent) }.onFailure { isListening = false; status.text = "Try again" } }
     private fun stopListening() { runCatching { speechRecognizer?.cancel() }; isListening = false; status.text = "Listening..." }
