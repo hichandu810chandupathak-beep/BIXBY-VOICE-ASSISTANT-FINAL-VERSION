@@ -13,15 +13,21 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WelcomeActivity : Activity() {
-    private companion object { const val REQUEST_ONBOARDING = 7001 }
+    private companion object { const val REQUEST_ONBOARDING = 7001; const val EXTRA_START_VOICE = "start_voice_after_welcome" }
     private val prefs by lazy { getSharedPreferences("bixby_onboarding", Context.MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (prefs.getBoolean("completed", false)) { openMain(); return }
-        buildWelcome()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val completed = prefs.getBoolean("completed", false)
+            withContext(Dispatchers.Main) { if (completed) openMain(false) else buildWelcome() }
+        }
     }
 
     private fun buildWelcome() {
@@ -41,7 +47,7 @@ class WelcomeActivity : Activity() {
             if (Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
             permissions.filterTo(this) { ContextCompat.checkSelfPermission(this@WelcomeActivity, it) != PackageManager.PERMISSION_GRANTED }
         }
-        if (needed.isEmpty()) finishWelcome() else ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_ONBOARDING)
+        if (needed.isNotEmpty()) ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_ONBOARDING) else finishWelcome()
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -50,16 +56,14 @@ class WelcomeActivity : Activity() {
     }
 
     private fun finishWelcome() {
-        prefs.edit().putBoolean("completed", true).apply()
         val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         val notificationGranted = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (micGranted && notificationGranted) {
-            try { HotwordListeningService.start(this) } catch (e: Exception) { android.util.Log.e("BixbyLifecycle", "Failed to start listening service after permissions", e) }
-        } else {
-            android.util.Log.w("BixbyLifecycle", "Listening service deferred: microphone/notification permission not granted")
+        lifecycleScope.launch(Dispatchers.IO) {
+            prefs.edit().putBoolean("completed", true).apply()
+            withContext(Dispatchers.Main) { openMain(micGranted && notificationGranted) }
         }
-        openMain()
     }
-    private fun openMain() { startActivity(Intent(this, MainActivity::class.java)); finish() }
+
+    private fun openMain(startVoice: Boolean) { startActivity(Intent(this, MainActivity::class.java).apply { putExtra(EXTRA_START_VOICE, startVoice) }); finish() }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }

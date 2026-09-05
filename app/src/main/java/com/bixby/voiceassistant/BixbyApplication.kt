@@ -16,7 +16,6 @@ class BixbyApplication : Application() {
                 Handler(Looper.getMainLooper()).post {
                     Toast.makeText(this, "Bixby crash: $message", Toast.LENGTH_LONG).show()
                 }
-                Thread.sleep(1200L)
             } catch (handlerError: Exception) {
                 Log.e("BixbyCrash", "Crash handler failed", handlerError)
             }
