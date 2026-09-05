@@ -5,12 +5,10 @@ import android.util.Log
 import com.bixby.voiceassistant.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 
 /** Executes local device commands first, then contacts Gemini only for AI requests. */
@@ -42,45 +40,23 @@ class AssistantAiHandler(context: Context) {
         }
 
         try {
-            val requestJson = JSONObject()
-                .put(
-                    "contents",
-                    JSONArray().put(
-                        JSONObject().put(
-                            "parts",
-                            JSONArray().put(JSONObject().put("text", prompt))
-                        )
-                    )
-                )
-                .put(
-                    "systemInstruction",
-                    JSONObject().put(
-                        "parts",
-                        JSONArray().put(
-                            JSONObject().put(
-                                "text",
-                                "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
-                            )
-                        )
-                    )
-                )
+            // Gemini generateContent payload: contents -> parts -> text.
+            // JSONObject.quote keeps quotes/newlines in user input valid JSON.
+            val safeUserText = JSONObject.quote(prompt)
+            val jsonBody = """{"contents": [{"parts": [{"text": $safeUserText}]}]}"""
 
-            // Build the URL structurally so the API key is encoded correctly.
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-                .toHttpUrl()
-                .newBuilder()
-                .addQueryParameter("key", apiKey)
-                .build()
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}"
 
             val request = Request.Builder()
                 .url(url)
-                .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .post(jsonBody.toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .header("Accept", "application/json")
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
+                    // Log the complete Google response so the exact rejection is visible in Logcat.
                     Log.e("BixbyAPI", "HTTP ${response.code}: $body")
                     throw IllegalStateException("HTTP ${response.code}")
                 }
@@ -109,7 +85,6 @@ class AssistantAiHandler(context: Context) {
             }
         } catch (error: Exception) {
             Log.e("BixbyAPI", "OkHttp/Gemini request failed", error)
-            // Never expose technical network details to the UI or TTS.
             Result.failure(GeminiConnectionException())
         }
     }
