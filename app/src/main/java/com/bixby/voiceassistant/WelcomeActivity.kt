@@ -5,8 +5,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -37,8 +37,8 @@ class WelcomeActivity : Activity() {
     private fun requestPermissionsForAssistant() {
         val needed = buildList {
             val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CONTACTS, Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.READ_CALENDAR)
-            if (android.os.Build.VERSION.SDK_INT >= 31) permissions += Manifest.permission.BLUETOOTH_CONNECT
-            if (android.os.Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
+            if (Build.VERSION.SDK_INT >= 31) permissions += Manifest.permission.BLUETOOTH_CONNECT
+            if (Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
             permissions.filterTo(this) { ContextCompat.checkSelfPermission(this@WelcomeActivity, it) != PackageManager.PERMISSION_GRANTED }
         }
         if (needed.isEmpty()) finishWelcome() else ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_ONBOARDING)
@@ -51,7 +51,13 @@ class WelcomeActivity : Activity() {
 
     private fun finishWelcome() {
         prefs.edit().putBoolean("completed", true).apply()
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) runCatching { HotwordListeningService.start(this) }
+        val micGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val notificationGranted = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (micGranted && notificationGranted) {
+            try { HotwordListeningService.start(this) } catch (e: Exception) { android.util.Log.e("BixbyLifecycle", "Failed to start listening service after permissions", e) }
+        } else {
+            android.util.Log.w("BixbyLifecycle", "Listening service deferred: microphone/notification permission not granted")
+        }
         openMain()
     }
     private fun openMain() { startActivity(Intent(this, MainActivity::class.java)); finish() }
