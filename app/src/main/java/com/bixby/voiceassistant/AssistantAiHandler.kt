@@ -27,9 +27,11 @@ class AssistantAiHandler(context: Context) {
             Client(apiKey = apiKey).use { client ->
                 val response = client.models.generateContent(
                     model = "gemini-flash-latest",
-                    text = Content.fromText(prompt),
+                    text = prompt,
                     config = GenerateContentConfig(
-                        systemInstruction = "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
+                        systemInstruction = Content.fromText(
+                            "You are Bixby, a concise, friendly Android voice assistant. Answer naturally and helpfully."
+                        )
                     )
                 )
                 response.text?.trim().takeUnless { it.isNullOrEmpty() }
