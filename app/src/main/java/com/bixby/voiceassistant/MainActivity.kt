@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -61,6 +64,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         responseContent = findViewById(R.id.tvResponseContent)
         commandInput = findViewById(R.id.etCommandInput)
         orbGlow = findViewById(R.id.orbGlow)
+        applyGlassEffect(floatingBar)
+        applyGlassEffect(responseSheet)
         startOrbPulse()
         textToSpeech = TextToSpeech(this, this)
         setupSpeechRecognizer()
@@ -81,6 +86,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }
         floatingBar.setOnClickListener { toggleResponseSheet() }
+    }
+
+    private fun applyGlassEffect(view: View) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            view.setRenderEffect(RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP))
+        }
     }
 
     private fun toggleKeyboardInput() {
@@ -178,8 +189,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     speakResponse(response)
                 },
                 onFailure = { error ->
-                    val detail = error.message?.trim().takeUnless { it.isNullOrEmpty() } ?: error.javaClass.simpleName
-                    val message = "Gemini API error: $detail"
+                    val message = if (error is AssistantAiHandler.GeminiConnectionException) {
+                        "I am sorry, I am having trouble connecting right now."
+                    } else if (error is AssistantAiHandler.MissingGeminiApiKeyException) {
+                        "I am sorry, I cannot connect right now."
+                    } else {
+                        "I am sorry, I am having trouble connecting right now."
+                    }
                     status.text = message
                     showResponseWithTyping(message)
                     speakResponse(message)
