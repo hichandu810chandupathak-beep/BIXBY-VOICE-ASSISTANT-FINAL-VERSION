@@ -4,9 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -28,9 +25,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
@@ -64,8 +59,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         responseContent = findViewById(R.id.tvResponseContent)
         commandInput = findViewById(R.id.etCommandInput)
         orbGlow = findViewById(R.id.orbGlow)
-        applyGlassEffect(floatingBar)
-        applyGlassEffect(responseSheet)
+
+        // No global RenderEffect/blur: every text, icon, and surface stays crisp.
         startOrbPulse()
         textToSpeech = TextToSpeech(this, this)
         setupSpeechRecognizer()
@@ -84,14 +79,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 true
             } else false
         }
-        findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }
-        floatingBar.setOnClickListener { toggleResponseSheet() }
-    }
-
-    private fun applyGlassEffect(view: View) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            view.setRenderEffect(RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP))
+        findViewById<View>(R.id.btnMicTrigger).setOnClickListener {
+            if (isListening) stopListening() else requestPermissionsAndListen()
         }
+        floatingBar.setOnClickListener { toggleResponseSheet() }
     }
 
     private fun toggleKeyboardInput() {
@@ -131,7 +122,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
                 override fun onEndOfSpeech() { isListening = false; status.text = "Thinking..." }
                 override fun onPartialResults(partialResults: Bundle?) {
-                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { status.text = it }
+                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        ?.firstOrNull()?.let { status.text = it }
                 }
                 override fun onResults(results: Bundle?) {
                     isListening = false
@@ -169,7 +161,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         status.text = "Listening..."
         isListening = true
-        runCatching { recognizer.startListening(intent) }.onFailure { isListening = false; status.text = "Try again" }
+        runCatching { recognizer.startListening(intent) }.onFailure {
+            isListening = false
+            status.text = "Try again"
+        }
     }
 
     private fun stopListening() {
@@ -180,7 +175,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun handleRecognizedText(userText: String) {
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) { aiHandler.generateResponse(userText) }
+            // AssistantAiHandler executes the local/offline interceptor first. Only
+            // genuinely non-local requests reach OkHttp/Gemini.
+            val result = aiHandler.generateResponse(userText)
             if (isFinishing || isDestroyed) return@launch
             result.fold(
                 onSuccess = { response ->
@@ -189,9 +186,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     speakResponse(response)
                 },
                 onFailure = { error ->
-                    val message = if (error is AssistantAiHandler.GeminiConnectionException) {
-                        "I am sorry, I am having trouble connecting right now."
-                    } else if (error is AssistantAiHandler.MissingGeminiApiKeyException) {
+                    val message = if (error is AssistantAiHandler.MissingGeminiApiKeyException) {
                         "I am sorry, I cannot connect right now."
                     } else {
                         "I am sorry, I am having trouble connecting right now."
@@ -232,16 +227,24 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, "bixby_response")
     }
 
-    private fun startOrbPulse() { orbGlow.clearAnimation(); orbGlow.startAnimation(AnimationUtils.loadAnimation(this, R.anim.orb_pulse)) }
+    private fun startOrbPulse() {
+        orbGlow.clearAnimation()
+        orbGlow.startAnimation(AnimationUtils.loadAnimation(this, R.anim.orb_pulse))
+    }
+
     private fun stopOrbPulse() { orbGlow.clearAnimation() }
 
     private fun toggleResponseSheet() {
         if (responseSheet.visibility == View.VISIBLE) {
             responseSheet.animate().translationY(responseSheet.height.toFloat()).alpha(0f).setDuration(220L).withEndAction {
-                responseSheet.visibility = View.GONE; responseSheet.translationY = 0f; responseSheet.alpha = 1f
+                responseSheet.visibility = View.GONE
+                responseSheet.translationY = 0f
+                responseSheet.alpha = 1f
             }.start()
         } else {
-            responseSheet.translationY = responseSheet.height.toFloat(); responseSheet.alpha = 0f; responseSheet.visibility = View.VISIBLE
+            responseSheet.translationY = responseSheet.height.toFloat()
+            responseSheet.alpha = 0f
+            responseSheet.visibility = View.VISIBLE
             responseSheet.animate().translationY(0f).alpha(1f).setDuration(280L).start()
         }
     }
@@ -266,9 +269,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onDestroy() {
         typingRunnable?.let(mainHandler::removeCallbacks)
-        speechRecognizer?.destroy(); speechRecognizer = null
-        textToSpeech?.stop(); textToSpeech?.shutdown(); textToSpeech = null
-        stopOrbPulse(); mainHandler.removeCallbacksAndMessages(null)
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        textToSpeech = null
+        stopOrbPulse()
+        mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 }
