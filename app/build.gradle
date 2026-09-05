@@ -13,11 +13,6 @@ android {
         targetSdk 35
         versionCode 5
         versionName "1.0.3"
-        buildConfigField 'String', 'GEMINI_API_KEY', '"' + (System.getenv('GEMINI_API_KEY') ?: '') + '"'
-    }
-
-    buildFeatures {
-        buildConfig true
     }
 
     compileOptions {
