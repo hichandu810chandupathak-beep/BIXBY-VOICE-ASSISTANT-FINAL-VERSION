@@ -23,8 +23,8 @@ class CommandExecutor(private val context: Context) {
         if (text.isEmpty()) return Result.NotHandled
 
         return when {
-            isFlashlightCommand(text) -> Result.Handled(toggleFlashlight())
-            isBluetoothCommand(text) -> Result.Handled(handleBluetooth())
+            isFlashlightCommand(text) -> Result.Handled(setFlashlight(desiredFlashlightState(text)))
+            isBluetoothCommand(text) -> Result.Handled(handleBluetooth(text))
             isWifiSettingsCommand(text) -> {
                 openSettings(Settings.ACTION_WIFI_SETTINGS)
                 Result.Handled("Opening Wi-Fi settings.")
@@ -45,44 +45,60 @@ class CommandExecutor(private val context: Context) {
         (text.contains("wifi") || text.contains("wi-fi")) &&
             (text.contains("settings") || text.contains("open") || text.contains("show"))
 
-    private fun toggleFlashlight(): String {
+    private fun desiredFlashlightState(text: String): Boolean = when {
+        text.contains("turn off") -> false
+        text.contains("turn on") -> true
+        else -> !torchState
+    }
+
+    private fun setFlashlight(enabled: Boolean): String {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             return "Camera permission is needed to control the flashlight."
         }
 
-        val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id)
-                .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-        } ?: return "This phone does not have a controllable flashlight."
-
         return try {
-            // Read current torch state when supported; switching is intentionally fail-safe.
-            val nextState = !torchState
-            cameraManager.setTorchMode(cameraId, nextState)
-            torchState = nextState
-            if (nextState) "Flashlight turned on." else "Flashlight turned off."
+            val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id)
+                    .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            } ?: return "This phone does not have a controllable flashlight."
+
+            cameraManager.setTorchMode(cameraId, enabled)
+            torchState = enabled
+            if (enabled) "Flashlight turned on." else "Flashlight turned off."
         } catch (_: Exception) {
             "I couldn't control the flashlight right now."
         }
     }
 
-    private fun handleBluetooth(): String {
+    private fun handleBluetooth(text: String): String {
         val adapter = BluetoothAdapter.getDefaultAdapter()
             ?: return "Bluetooth is not available on this phone."
 
-        // Modern Android restricts third-party apps from silently changing Bluetooth state.
+        val wantsOn = text.contains("turn on")
+        val wantsOff = text.contains("turn off")
+
         return try {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
                 "Opening Bluetooth settings. Android may require you to confirm the change."
-            } else {
+            } else if (wantsOn) {
                 @Suppress("DEPRECATION")
-                val changed = adapter.disable() // Prefer explicit settings on newer Android builds.
+                val changed = adapter.enable()
+                if (changed) "Bluetooth turned on." else {
+                    openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
+                    "Opening Bluetooth settings."
+                }
+            } else if (wantsOff) {
+                @Suppress("DEPRECATION")
+                val changed = adapter.disable()
                 if (changed) "Bluetooth turned off." else {
                     openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
                     "Opening Bluetooth settings."
                 }
+            } else {
+                openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
+                "Opening Bluetooth settings."
             }
         } catch (_: SecurityException) {
             openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
@@ -91,7 +107,9 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun openSettings(action: String) {
-        context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        runCatching {
+            context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
     }
 
     companion object {
