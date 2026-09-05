@@ -28,7 +28,7 @@ import java.util.Locale
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private companion object {
-        const val REQUEST_RECORD_AUDIO = 1001
+        const val REQUEST_PERMISSIONS = 1001
         const val TYPING_DELAY_MS = 24L
         const val NETWORK_ERROR_MESSAGE = "I am having trouble connecting to the network."
     }
@@ -45,31 +45,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var pendingResponse: String? = null
     private var typingRunnable: Runnable? = null
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val aiHandler = AssistantAiHandler()
+    private val aiHandler by lazy { AssistantAiHandler(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         floatingBar = findViewById(R.id.floatingBar)
         responseSheet = findViewById(R.id.responseSheet)
         status = findViewById(R.id.tvAssistantStatus)
         responseContent = findViewById(R.id.tvResponseContent)
         orbGlow = findViewById(R.id.orbGlow)
-
         startOrbPulse()
         textToSpeech = TextToSpeech(this, this)
         setupSpeechRecognizer()
-
-        findViewById<View>(R.id.btnKeyboard).setOnClickListener {
-            stopListening()
-            status.text = "Type a command"
-        }
-
-        findViewById<View>(R.id.btnMicTrigger).setOnClickListener {
-            if (isListening) stopListening() else requestMicrophoneAndListen()
-        }
-
+        findViewById<View>(R.id.btnKeyboard).setOnClickListener { stopListening(); status.text = "Type a command" }
+        findViewById<View>(R.id.btnMicTrigger).setOnClickListener { if (isListening) stopListening() else requestPermissionsAndListen() }
         floatingBar.setOnClickListener { toggleResponseSheet() }
     }
 
@@ -78,75 +68,41 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             status.text = "Speech recognition unavailable"
             return
         }
-
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
             setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    status.text = "Listening..."
-                }
-
-                override fun onBeginningOfSpeech() {
-                    status.text = "Listening..."
-                }
-
+                override fun onReadyForSpeech(params: Bundle?) { isListening = true; status.text = "Listening..." }
+                override fun onBeginningOfSpeech() { status.text = "Listening..." }
                 override fun onRmsChanged(rmsdB: Float) = Unit
                 override fun onBufferReceived(buffer: ByteArray?) = Unit
-
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    status.text = "Thinking..."
-                }
-
+                override fun onEndOfSpeech() { isListening = false; status.text = "Thinking..." }
                 override fun onPartialResults(partialResults: Bundle?) {
-                    val text = partialResults
-                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()
-                    if (!text.isNullOrBlank()) status.text = text
+                    partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let { status.text = it }
                 }
-
                 override fun onResults(results: Bundle?) {
                     isListening = false
-                    val text = results
-                        ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        ?.firstOrNull()
-                    if (text.isNullOrBlank()) {
-                        status.text = "I didn't catch that"
-                        return
-                    }
+                    val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                    if (text.isNullOrBlank()) { status.text = "I didn't catch that"; return }
                     status.text = "Thinking..."
                     handleRecognizedText(text)
                 }
-
                 override fun onError(error: Int) {
                     isListening = false
-                    status.text = if (
-                        error == SpeechRecognizer.ERROR_NO_MATCH ||
-                        error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-                    ) {
-                        "Didn't catch that"
-                    } else {
-                        "Try again"
-                    }
+                    status.text = if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) "Didn't catch that" else "Try again"
                 }
-
                 override fun onEvent(eventType: Int, params: Bundle?) = Unit
             })
         }
     }
 
-    private fun requestMicrophoneAndListen() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                REQUEST_RECORD_AUDIO
-            )
-            return
+    private fun requestPermissionsAndListen() {
+        val needed = buildList {
+            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.RECORD_AUDIO)
+            if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.CAMERA)
+            if (android.os.Build.VERSION.SDK_INT >= 31 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) add(Manifest.permission.BLUETOOTH_CONNECT)
         }
-        startListening()
+        if (needed.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)
+        } else startListening()
     }
 
     private fun startListening() {
@@ -157,33 +113,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-
         status.text = "Listening..."
         isListening = true
-        recognizer.startListening(intent)
+        runCatching { recognizer.startListening(intent) }.onFailure { isListening = false; status.text = "Try again" }
     }
 
     private fun stopListening() {
-        speechRecognizer?.cancel()
+        runCatching { speechRecognizer?.cancel() }
         isListening = false
         status.text = "Listening..."
     }
 
     private fun handleRecognizedText(userText: String) {
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                aiHandler.generateResponse(userText)
-            }
-
+            val result = withContext(Dispatchers.IO) { aiHandler.generateResponse(userText) }
             if (isFinishing || isDestroyed) return@launch
-
             result.fold(
                 onSuccess = { response ->
                     status.text = "Answering..."
                     showResponseWithTyping(response)
                     speakResponse(response)
                 },
-                onFailure = { error ->
+                onFailure = {
                     status.text = "Connection problem"
                     showResponseWithTyping(NETWORK_ERROR_MESSAGE)
                     speakResponse(NETWORK_ERROR_MESSAGE)
@@ -198,23 +149,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         responseSheet.alpha = 1f
         responseSheet.post {
             responseSheet.translationY = responseSheet.height.toFloat()
-            responseSheet.animate()
-                .translationY(0f)
-                .alpha(1f)
-                .setDuration(280L)
-                .start()
+            responseSheet.animate().translationY(0f).alpha(1f).setDuration(280L).start()
         }
         responseContent.text = ""
-
         var index = 0
         val typeNext = object : Runnable {
             override fun run() {
-                if (index >= response.length) {
-                    typingRunnable = null
-                    return
-                }
-                responseContent.append(response[index].toString())
-                index++
+                if (index >= response.length) { typingRunnable = null; return }
+                responseContent.append(response[index++].toString())
                 mainHandler.postDelayed(this, TYPING_DELAY_MS)
             }
         }
@@ -223,91 +165,49 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun speakResponse(response: String) {
-        val tts = textToSpeech
-        if (tts == null) {
-            pendingResponse = response
-            return
-        }
-
+        val tts = textToSpeech ?: run { pendingResponse = response; return }
         if (tts.isSpeaking) tts.stop()
         startOrbPulse()
         tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, "bixby_response")
     }
 
-    private fun startOrbPulse() {
-        orbGlow.clearAnimation()
-        orbGlow.startAnimation(AnimationUtils.loadAnimation(this, R.anim.orb_pulse))
-    }
-
-    private fun stopOrbPulse() {
-        orbGlow.clearAnimation()
-    }
+    private fun startOrbPulse() { orbGlow.clearAnimation(); orbGlow.startAnimation(AnimationUtils.loadAnimation(this, R.anim.orb_pulse)) }
+    private fun stopOrbPulse() { orbGlow.clearAnimation() }
 
     private fun toggleResponseSheet() {
         if (responseSheet.visibility == View.VISIBLE) {
-            responseSheet.animate()
-                .translationY(responseSheet.height.toFloat())
-                .alpha(0f)
-                .setDuration(220L)
-                .withEndAction {
-                    responseSheet.visibility = View.GONE
-                    responseSheet.translationY = 0f
-                    responseSheet.alpha = 1f
-                }
-                .start()
+            responseSheet.animate().translationY(responseSheet.height.toFloat()).alpha(0f).setDuration(220L).withEndAction {
+                responseSheet.visibility = View.GONE; responseSheet.translationY = 0f; responseSheet.alpha = 1f
+            }.start()
         } else {
-            responseSheet.translationY = responseSheet.height.toFloat()
-            responseSheet.alpha = 0f
-            responseSheet.visibility = View.VISIBLE
-            responseSheet.animate()
-                .translationY(0f)
-                .alpha(1f)
-                .setDuration(280L)
-                .start()
+            responseSheet.translationY = responseSheet.height.toFloat(); responseSheet.alpha = 0f; responseSheet.visibility = View.VISIBLE
+            responseSheet.animate().translationY(0f).alpha(1f).setDuration(280L).start()
         }
     }
 
     override fun onInit(statusCode: Int) {
-        if (statusCode == TextToSpeech.SUCCESS) {
-            textToSpeech?.language = Locale.getDefault()
-        }
-
+        if (statusCode == TextToSpeech.SUCCESS) textToSpeech?.language = Locale.getDefault()
         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = runOnUiThread { startOrbPulse() }
             override fun onDone(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
             override fun onError(utteranceId: String?) = runOnUiThread { stopOrbPulse() }
         })
-
-        pendingResponse?.let {
-            pendingResponse = null
-            speakResponse(it)
-        }
+        pendingResponse?.let { pendingResponse = null; speakResponse(it) }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_RECORD_AUDIO &&
-            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
-        ) {
-            startListening()
-        } else if (requestCode == REQUEST_RECORD_AUDIO) {
-            status.text = "Microphone permission needed"
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startListening()
+            else status.text = "Microphone permission needed"
         }
     }
 
     override fun onDestroy() {
         typingRunnable?.let(mainHandler::removeCallbacks)
-        speechRecognizer?.destroy()
-        speechRecognizer = null
-        textToSpeech?.stop()
-        textToSpeech?.shutdown()
-        textToSpeech = null
-        stopOrbPulse()
-        mainHandler.removeCallbacksAndMessages(null)
+        speechRecognizer?.destroy(); speechRecognizer = null
+        textToSpeech?.stop(); textToSpeech?.shutdown(); textToSpeech = null
+        stopOrbPulse(); mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 }
