@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class AssistantAiHandler(private val context: Context) {
-    class NetworkConfigException(msg: String) : Exception(msg)
+    class GeminiConnectionException(msg: String) : Exception(msg)
 
     suspend fun generateResponse(prompt: String): Result<String> = withContext(Dispatchers.IO) {
         val lower = prompt.lowercase()
@@ -35,8 +35,8 @@ class AssistantAiHandler(private val context: Context) {
                 val text = JSONObject(response).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
                 Result.success(text)
             } else {
-                Result.failure(NetworkConfigException("Server Error: ${connection.responseCode}"))
+                Result.failure(GeminiConnectionException("API Error: ${connection.responseCode}"))
             }
-        } catch (e: Exception) { Result.failure(NetworkConfigException("Connection Failed")) }
+        } catch (e: Exception) { Result.failure(GeminiConnectionException("Connection Failed")) }
     }
 }
