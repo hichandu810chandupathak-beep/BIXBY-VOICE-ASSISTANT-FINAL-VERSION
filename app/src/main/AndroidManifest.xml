@@ -25,7 +25,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <application android:name=".BixbyApplication" android:allowBackup="true" android:icon="@drawable/ic_bixby_launcher" android:label="Bixby" android:roundIcon="@drawable/ic_bixby_launcher" android:supportsRtl="true" android:theme="@style/Theme.Bixby">
-        <activity android:name=".WelcomeActivity" android:exported="true" />
+        <activity android:name=".CrashActivity" android:exported="false" android:theme="@style/Theme.Bixby" />
+        <activity android:name=".WelcomeActivity" android:exported="true" android:theme="@style/Theme.Bixby" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity>
         <service android:name=".BixbyVoiceInteractionService" android:exported="true" android:directBootAware="true" android:permission="android.permission.BIND_VOICE_INTERACTION"><intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter><meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction_service" /><meta-data android:name="android.voice_interaction_service" android:resource="@xml/voice_interaction_service" /></service>

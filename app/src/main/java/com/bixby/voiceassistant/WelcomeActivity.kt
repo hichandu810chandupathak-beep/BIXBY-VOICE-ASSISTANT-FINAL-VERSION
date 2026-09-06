@@ -24,7 +24,14 @@ class WelcomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        renderWelcome()
+        try {
+            renderWelcome()
+        } catch (throwable: Throwable) {
+            startActivity(Intent(this, CrashActivity::class.java).apply {
+                putExtra("crash_log", throwable.stackTraceToString())
+            })
+            finish()
+        }
     }
 
     private fun renderWelcome() {
