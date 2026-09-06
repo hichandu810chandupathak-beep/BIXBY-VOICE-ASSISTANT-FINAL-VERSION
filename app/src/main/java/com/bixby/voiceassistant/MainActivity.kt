@@ -50,12 +50,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 status.text = "Microphone permission needed"
             }
         }
-        val permissionsToRequest = buildList {
-            if (!hasRecordAudioPermission()) add(Manifest.permission.RECORD_AUDIO)
-            if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission()) add(Manifest.permission.POST_NOTIFICATIONS)
+        val permissionsToRequest = arrayOf(
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.READ_CONTACTS,
+            android.Manifest.permission.CALL_PHONE,
+            android.Manifest.permission.SEND_SMS
+        ).filter { androidx.core.content.ContextCompat.checkSelfPermission(this@MainActivity, it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            permissionLauncher?.launch(permissionsToRequest.toTypedArray())
+        } else if (intent.getBooleanExtra(EXTRA_START_VOICE, false)) {
+            startVoiceAfterBackgroundSetup()
         }
-        if (permissionsToRequest.isNotEmpty()) permissionLauncher?.launch(permissionsToRequest.toTypedArray())
-        else if (intent.getBooleanExtra(EXTRA_START_VOICE, false)) startVoiceAfterBackgroundSetup()
     }
 
     private fun setupUi() {
