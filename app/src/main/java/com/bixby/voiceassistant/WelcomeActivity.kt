@@ -12,19 +12,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class WelcomeActivity : AppCompatActivity() {
-    private companion object { const val EXTRA_START_VOICE = "start_voice_after_welcome" }
-
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions: Map<String, Boolean> ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            getSharedPreferences("bixby_onboarding", MODE_PRIVATE)
-                .edit().putBoolean("completed", true).apply()
-            HotwordListeningService.start(this)
-            startActivity(Intent(this, MainActivity::class.java).apply {
-                putExtra(EXTRA_START_VOICE, true)
-            })
+        val isGranted = permissions.values.all { it }
+        if (isGranted) {
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
         }
     }
@@ -59,12 +52,7 @@ class WelcomeActivity : AppCompatActivity() {
             text = "Continue & Allow"
             setOnClickListener {
                 Toast.makeText(this@WelcomeActivity, "Requesting permissions...", Toast.LENGTH_SHORT).show()
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.RECORD_AUDIO,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    )
-                )
+                permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS))
             }
         }, LinearLayout.LayoutParams(-1, dp(52)))
         setContentView(root)
