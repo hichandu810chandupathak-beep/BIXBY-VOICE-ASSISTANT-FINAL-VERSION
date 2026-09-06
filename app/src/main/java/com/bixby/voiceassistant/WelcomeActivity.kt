@@ -2,6 +2,7 @@ package com.bixby.voiceassistant
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
@@ -10,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 class WelcomeActivity : AppCompatActivity() {
     private val permissionLauncher = registerForActivityResult(
@@ -24,6 +26,13 @@ class WelcomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val recordAudioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val notificationGranted = android.os.Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (recordAudioGranted && notificationGranted) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
         try {
             renderWelcome()
         } catch (throwable: Throwable) {
