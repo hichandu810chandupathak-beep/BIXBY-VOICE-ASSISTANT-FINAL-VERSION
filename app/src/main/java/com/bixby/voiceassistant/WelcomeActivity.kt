@@ -15,8 +15,8 @@ class WelcomeActivity : AppCompatActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions: Map<String, Boolean> ->
-        val isGranted = permissions.values.all { it }
-        if (isGranted) {
+        val allGranted = permissions.values.all { it == true }
+        if (allGranted) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         }
