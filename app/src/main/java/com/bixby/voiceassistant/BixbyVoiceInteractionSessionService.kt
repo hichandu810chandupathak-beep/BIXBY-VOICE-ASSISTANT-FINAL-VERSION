@@ -15,9 +15,8 @@ class BixbyVoiceInteractionSessionService : VoiceInteractionSessionService() {
 private class BixbyVoiceInteractionSession(context: Context) : VoiceInteractionSession(context) {
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        val intent = Intent(context, MainActivity::class.java).apply {
+        startVoiceActivity(Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-        context.startActivity(intent)
+        })
     }
 }
