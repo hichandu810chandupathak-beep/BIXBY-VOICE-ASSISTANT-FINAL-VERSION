@@ -33,11 +33,11 @@ class HotwordListeningService : Service() {
         override fun onBeginningOfSpeech() = Unit
         override fun onRmsChanged(rmsdB: Float) = Unit
         override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onEndOfSpeech() = restartListening()
+        override fun onEndOfSpeech() = Unit
         override fun onPartialResults(partialResults: Bundle?) { handleResults(partialResults) }
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
-        override fun onError(error: Int) = restartListening()
-        override fun onResults(results: Bundle?) { handleResults(results); restartListening() }
+        override fun onError(error: Int) = Unit
+        override fun onResults(results: Bundle?) { handleResults(results) }
     }
 
     override fun onCreate() {
@@ -66,7 +66,7 @@ class HotwordListeningService : Service() {
             android.util.Log.e("BixbyCrash", "Error during HotwordListeningService start", e)
             stopSelf()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun hasRequiredPermissions(): Boolean {
