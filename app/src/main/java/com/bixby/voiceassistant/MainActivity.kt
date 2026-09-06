@@ -37,14 +37,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleScope.launch(Dispatchers.IO) {
-            val completed = getSharedPreferences("bixby_onboarding", Context.MODE_PRIVATE).getBoolean("completed", false)
-            withContext(Dispatchers.Main) {
-                if (!completed) { startActivity(Intent(this@MainActivity, WelcomeActivity::class.java)); finish(); return@withContext }
-                setupUi()
-                if (intent.getBooleanExtra(EXTRA_START_VOICE, false)) startVoiceAfterBackgroundSetup()
-            }
-        }
+        setupUi()
+        if (intent.getBooleanExtra(EXTRA_START_VOICE, false)) startVoiceAfterBackgroundSetup()
     }
 
     private fun setupUi() {
