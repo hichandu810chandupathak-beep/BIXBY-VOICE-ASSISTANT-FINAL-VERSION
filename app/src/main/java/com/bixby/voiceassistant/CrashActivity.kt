@@ -10,18 +10,18 @@ class CrashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val crashLog = intent.getStringExtra("crash_log") ?: "No crash log available."
-        val textView = TextView(this).apply {
-            text = crashLog
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.BLACK)
-            setPadding(24, 24, 24, 24)
-            isTextSelectable = true
-        }
-        val scrollView = ScrollView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            addView(textView)
-        }
+
+        val textView = TextView(this)
+        textView.text = crashLog
+        textView.textSize = 14f
+        textView.setTextColor(Color.WHITE)
+        textView.setBackgroundColor(Color.BLACK)
+        textView.setPadding(24, 24, 24, 24)
+        textView.isTextSelectable = true
+
+        val scrollView = ScrollView(this)
+        scrollView.setBackgroundColor(Color.BLACK)
+        scrollView.addView(textView)
         setContentView(scrollView)
     }
 }
