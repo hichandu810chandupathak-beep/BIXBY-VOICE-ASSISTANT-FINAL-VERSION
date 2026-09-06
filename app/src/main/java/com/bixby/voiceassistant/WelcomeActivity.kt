@@ -2,12 +2,12 @@ package com.bixby.voiceassistant
 
 import android.Manifest
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
@@ -17,7 +17,7 @@ class WelcomeActivity : AppCompatActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions: Map<String, Boolean> ->
-        val allGranted = permissions.values.all { it == true }
+        val allGranted = permissions.values.all { it }
         if (allGranted) {
             getSharedPreferences("bixby_onboarding", MODE_PRIVATE)
                 .edit().putBoolean("completed", true).apply()
@@ -57,24 +57,17 @@ class WelcomeActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(-1, -2))
         root.addView(Button(this).apply {
             text = "Continue & Allow"
-            setOnClickListener { launchPermissions() }
+            setOnClickListener {
+                Toast.makeText(this@WelcomeActivity, "Requesting permissions...", Toast.LENGTH_SHORT).show()
+                permissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.RECORD_AUDIO,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                )
+            }
         }, LinearLayout.LayoutParams(-1, dp(52)))
         setContentView(root)
-    }
-
-    private fun launchPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CAMERA,
-            Manifest.permission.CALL_PHONE,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_SMS,
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.READ_CALENDAR
-        )
-        if (Build.VERSION.SDK_INT >= 31) permissions += Manifest.permission.BLUETOOTH_CONNECT
-        if (Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
-        permissionLauncher.launch(permissions.toTypedArray())
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
