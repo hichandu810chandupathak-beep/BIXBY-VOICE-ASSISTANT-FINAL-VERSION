@@ -38,7 +38,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         status = findViewById(R.id.tvAssistantStatus)
         responseContent = findViewById(R.id.tvResponseContent)
         
-        // CRITICAL UI FIX: Enforce Text Color based on System Theme
         val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         responseContent.setTextColor(if (isDark) Color.WHITE else Color.BLACK)
         responseContent.visibility = View.VISIBLE
@@ -46,7 +45,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val settingsIcon = findViewById<ImageView>(R.id.btnSettings)
         settingsIcon.setColorFilter(if (isDark) Color.WHITE else Color.BLACK)
+        // SURGICAL FIX 1: Push Settings icon down to avoid Status Bar overlap
+        (settingsIcon.layoutParams as android.view.ViewGroup.MarginLayoutParams).topMargin = 120
+        settingsIcon.requestLayout()
+        
         settingsIcon.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+
+        // SURGICAL FIX 2: Enable Keyboard Button Input
+        findViewById<View>(R.id.btnKeyboard)?.setOnClickListener {
+            val input = EditText(this).apply { hint = "Type your command..." }
+            android.app.AlertDialog.Builder(this).setTitle("Type to Bixby").setView(input)
+                .setPositiveButton("Send") { _, _ -> processCommand(input.text.toString()) }
+                .setNegativeButton("Cancel", null).show()
+        }
 
         findViewById<View>(R.id.btnMicTrigger).setOnClickListener { 
             if (isListening) stopListening() else startListening() 
@@ -62,7 +73,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) tts.language = Locale("hi", "IN") // Hinglish Support
+        if (status == TextToSpeech.SUCCESS) tts.language = Locale("hi", "IN")
     }
 
     private fun startListening() {
@@ -100,7 +111,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             withContext(Dispatchers.Main) {
                 result.fold(
                     onSuccess = { reply -> responseContent.text = reply; status.text = "Tap mic to talk"; tts.speak(reply, TextToSpeech.QUEUE_FLUSH, null, null) },
-                    onFailure = { error -> responseContent.text = error.message; status.text = "Error"; tts.speak("I encountered an error.", TextToSpeech.QUEUE_FLUSH, null, null) }
+                    onFailure = { error -> responseContent.text = "ERROR DETECTED:\n${error.message}"; status.text = "Failed"; tts.speak("I encountered an error.", TextToSpeech.QUEUE_FLUSH, null, null) }
                 )
             }
         }

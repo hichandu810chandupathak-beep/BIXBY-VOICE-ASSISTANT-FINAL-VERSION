@@ -33,7 +33,7 @@ class AssistantAiHandler(private val context: Context) {
             connection.doOutput = true
 
             val safePrompt = prompt.replace("\"", "\\\"").replace("\n", " ")
-            val jsonBody = """{"contents": [{"parts":[{"text": "You are Bixby. Answer concisely in Hinglish or English. User: $safePrompt"}]}]}"""
+            val jsonBody = """{"contents": [{"parts":[{"text": "You are Bixby. Answer concisely. User: $safePrompt"}]}]}"""
             connection.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
 
             if (connection.responseCode == 200) {
@@ -41,11 +41,11 @@ class AssistantAiHandler(private val context: Context) {
                 try {
                     val text = JSONObject(response).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
                     Result.success(text)
-                } catch (e: Exception) { Result.success("I understood, but formatting failed.") }
+                } catch (e: Exception) { Result.failure(Exception("JSON Parse Error: ${e.message}")) }
             } else {
-                val err = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                Result.failure(Exception("API Error: ${connection.responseCode}. Check your API Key."))
+                val err = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown API Error"
+                Result.failure(Exception("HTTP ${connection.responseCode}: $err"))
             }
-        } catch (e: Exception) { Result.failure(Exception("Internet connection failed.")) }
+        } catch (e: Exception) { Result.failure(Exception("Network Error: ${e.message}")) }
     }
 }
