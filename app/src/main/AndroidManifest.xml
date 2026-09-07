@@ -1,26 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.bixby.voiceassistant">
-
-    <!-- STRICTLY NO FOREGROUND_SERVICE_MICROPHONE. Prevents One UI crash -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.bixby.voiceassistant">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
     
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Bixby"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.Bixby">
-
-        <activity android:name=".WelcomeActivity" android:exported="false" android:theme="@style/Theme.Bixby" />
-
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:theme="@style/Theme.Bixby.Overlay">
+    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="Bixby" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/Theme.Bixby">
+        
+        <!-- Welcome Activity is the Launcher (App Drawer Icon) -->
+        <activity android:name=".WelcomeActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <!-- Main Activity is the Transparent Assistant Overlay -->
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:theme="@style/Theme.Bixby.Overlay">
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
                 <action android:name="android.intent.action.VOICE_COMMAND" />
@@ -28,17 +22,12 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".BixbyVoiceInteractionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION">
-            <intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter>
-            <meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction" />
-        </service>
+        <activity android:name=".SettingsActivity" android:exported="false" />
+
+        <!-- Bixby Core Hardware Triggers -->
+        <service android:name=".BixbyVoiceInteractionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION"><intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter><meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction" /></service>
         <service android:name=".BixbySessionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION" />
         <service android:name=".BixbyRecognitionService" android:exported="true" />
-        
-        <service android:name=".BixbyAccessibilityService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
-            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_config" />
-        </service>
-
+        <service android:name=".BixbyAccessibilityService" android:exported="true" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_config" /></service>
     </application>
 </manifest>
