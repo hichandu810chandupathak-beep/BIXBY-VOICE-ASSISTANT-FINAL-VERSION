@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bixby_blue">#2A65F3</color>
+    <color name="bixby_purple">#9B51E0</color>
+    <color name="bixby_pink">#E1306C</color>
+    <color name="one_ui_black">#000000</color>
+    <color name="one_ui_dark_gray">#1C1C1E</color>
+    <color name="white">#FFFFFF</color>
+</resources>
