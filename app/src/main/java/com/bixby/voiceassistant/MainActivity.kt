@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,8 +41,11 @@ class MainActivity : AppCompatActivity() {
             if (isListening) stopListening() else startListening() 
         }
 
-        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { 
-            HotwordListeningService.start(this) 
+        // CRITICAL FIX: Simply request permissions. Do NOT start any Foreground Services.
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (results[Manifest.permission.RECORD_AUDIO] == true) {
+                Toast.makeText(this, "Bixby Ready! Use the Mic or Home Button.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         val permissions = arrayOf(
@@ -52,7 +54,14 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS
         ).filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
 
-        if (permissions.isNotEmpty()) permissionLauncher?.launch(permissions.toTypedArray()) else HotwordListeningService.start(this)
+        if (permissions.isNotEmpty()) {
+            permissionLauncher?.launch(permissions.toTypedArray())
+        }
+        
+        // Auto-start listening if triggered via the physical button (VoiceInteractionSession)
+        if (intent.getBooleanExtra("start_voice_after_welcome", false)) {
+            startListening()
+        }
     }
 
     private fun startListening() {
@@ -76,7 +85,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM) }
-        // Mute system beep before starting
         audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0)
         speechRecognizer?.startListening(intent)
     }

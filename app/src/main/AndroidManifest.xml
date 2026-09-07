@@ -10,7 +10,9 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    
+    <!-- FGS Permissions removed as the service is deprecated -->
+
     <application android:name=".BixbyApplication" android:allowBackup="true" android:icon="@drawable/ic_bixby_launcher" android:label="Bixby" android:roundIcon="@drawable/ic_bixby_launcher" android:supportsRtl="true" android:theme="@style/Theme.Bixby">
         <activity android:name=".WelcomeActivity" android:exported="true">
             <intent-filter>
@@ -18,7 +20,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
                 <action android:name="android.intent.action.VOICE_COMMAND" />
@@ -27,8 +29,15 @@
         </activity>
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".CrashActivity" android:exported="false" />
-        <service android:name=".BixbyVoiceInteractionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION"><intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter><meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction_service" /><meta-data android:name="android.voice_interaction_service" android:resource="@xml/voice_interaction_service" /></service>
+        
+        <!-- The Core Voice Assistant Binding Services (Home/Power Button Triggers) -->
+        <service android:name=".BixbyVoiceInteractionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <intent-filter><action android:name="android.service.voice.VoiceInteractionService" /></intent-filter>
+            <meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction_service" />
+            <meta-data android:name="android.voice_interaction_service" android:resource="@xml/voice_interaction_service" />
+        </service>
         <service android:name=".BixbyVoiceInteractionSessionService" android:exported="true" android:permission="android.permission.BIND_VOICE_INTERACTION" />
-        <service android:name=".HotwordListeningService" android:exported="false" android:foregroundServiceType="microphone" />
+        
+        <!-- HotwordListeningService has been OMITTED and DELETED to prevent FGS Security Exceptions on One UI 8.5 -->
     </application>
 </manifest>
