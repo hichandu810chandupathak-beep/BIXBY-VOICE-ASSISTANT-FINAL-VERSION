@@ -4,11 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.media.AudioManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,54 +20,54 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var status: TextView; private lateinit var responseContent: TextView
     private var speechRecognizer: SpeechRecognizer? = null; private var isListening = false
     private val aiHandler by lazy { AssistantAiHandler(applicationContext) }
-    private lateinit var audioManager: AudioManager
+    private lateinit var audioManager: AudioManager; private lateinit var tts: TextToSpeech
     private var permissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        status = findViewById(R.id.tvAssistantStatus); responseContent = findViewById(R.id.tvResponseContent)
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         
-        val settingsIcon = findViewById<ImageView>(R.id.btnSettings)
+        tts = TextToSpeech(this, this)
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        status = findViewById(R.id.tvAssistantStatus)
+        responseContent = findViewById(R.id.tvResponseContent)
+        
+        // CRITICAL UI FIX: Enforce Text Color based on System Theme
         val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        settingsIcon.setColorFilter(if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+        responseContent.setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+        responseContent.visibility = View.VISIBLE
+        responseContent.text = "Hi, I am Bixby. How can I help?"
+
+        val settingsIcon = findViewById<ImageView>(R.id.btnSettings)
+        settingsIcon.setColorFilter(if (isDark) Color.WHITE else Color.BLACK)
         settingsIcon.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
 
         findViewById<View>(R.id.btnMicTrigger).setOnClickListener { 
             if (isListening) stopListening() else startListening() 
         }
 
-        // CRITICAL FIX: Simply request permissions. Do NOT start any Foreground Services.
-        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            if (results[Manifest.permission.RECORD_AUDIO] == true) {
-                Toast.makeText(this, "Bixby Ready! Use the Mic or Home Button.", Toast.LENGTH_SHORT).show()
-            }
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { 
+            if (intent.getBooleanExtra("start_voice_after_welcome", false)) startListening()
         }
 
-        val permissions = arrayOf(
-            Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE,
-            Manifest.permission.SEND_SMS, Manifest.permission.READ_SMS, Manifest.permission.READ_CALENDAR,
-            Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS
-        ).filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        val permissions = arrayOf(Manifest.permission.RECORD_AUDIO).filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (permissions.isNotEmpty()) permissionLauncher?.launch(permissions.toTypedArray())
+        else if (intent.getBooleanExtra("start_voice_after_welcome", false)) startListening()
+    }
 
-        if (permissions.isNotEmpty()) {
-            permissionLauncher?.launch(permissions.toTypedArray())
-        }
-        
-        // Auto-start listening if triggered via the physical button (VoiceInteractionSession)
-        if (intent.getBooleanExtra("start_voice_after_welcome", false)) {
-            startListening()
-        }
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) tts.language = Locale("hi", "IN") // Hinglish Support
     }
 
     private fun startListening() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
+        tts.stop() 
         if (speechRecognizer == null) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
                 setRecognitionListener(object : RecognitionListener {
@@ -92,14 +94,16 @@ class MainActivity : AppCompatActivity() {
     private fun stopListening() { speechRecognizer?.cancel(); isListening = false; status.text = "Tap mic to talk" }
 
     private fun processCommand(text: String) {
+        responseContent.text = "You: $text\n\nThinking..."
         lifecycleScope.launch(Dispatchers.IO) {
             val result = aiHandler.generateResponse(text)
             withContext(Dispatchers.Main) {
                 result.fold(
-                    onSuccess = { responseContent.text = it },
-                    onFailure = { responseContent.text = it.message }
+                    onSuccess = { reply -> responseContent.text = reply; status.text = "Tap mic to talk"; tts.speak(reply, TextToSpeech.QUEUE_FLUSH, null, null) },
+                    onFailure = { error -> responseContent.text = error.message; status.text = "Error"; tts.speak("I encountered an error.", TextToSpeech.QUEUE_FLUSH, null, null) }
                 )
             }
         }
     }
+    override fun onDestroy() { super.onDestroy(); tts.shutdown(); speechRecognizer?.destroy() }
 }
