@@ -76,16 +76,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun processCommand(text: String) {
-        status.text = "You: $text\n\nThinking..."
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = aiHandler.generateResponse(text)
-            withContext(Dispatchers.Main) {
-                result.fold(
-                    onSuccess = { reply -> status.text = reply; tts.speak(reply, TextToSpeech.QUEUE_FLUSH, null, null) },
-                    onFailure = { err -> status.text = "Error: ${err.message}" }
-                )
-            }
+    tts.stop()
+    // Local commands check (jaise calling, flashlight, etc.) yahan ho chuke honge
+    // Agar koi unmatched conversational query ho, toh seedha system ka default assistant / Gemini trigger karo:
+    try {
+        val intent = Intent(Intent.ACTION_ASSIST).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+        startActivity(intent)
+    }ع catch (e: Exception) {
+        // Fallback agar ACTION_ASSIST block ho toh Voice Command intent fire karo
+        val fallbackIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(fallbackIntent)
     }
+}
+    
     override fun onDestroy() { super.onDestroy(); tts.shutdown(); speechRecognizer?.destroy() }
 }
